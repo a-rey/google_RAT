@@ -2,8 +2,8 @@
 A RAT (Remote Access Tool) for Windows systems using google apps script as the middle man
 
 ### TODO
-* may need to use post requests to get around IE GET request character limit
-* fix race condition with `$ie.busy`. `sleep` is a quick fix.
+* add extra encryption on top of b64
+* get around expected Unicode PS encryption for `-enc` commands
 
 ### Setup
 * Create a fake Google account
