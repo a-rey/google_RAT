@@ -3,9 +3,12 @@ A RAT (Remote Access Tool) for Windows systems using google apps script as the m
 
 ### TODO
 * add extra encryption on top of b64
-* add chunked file uploads
-* extend python shell interface
+* test chunked upload of files
+* add code for chunked file downloads
 * add timestamps to google drive output
+* change distractor from google maps to something else
+* implement data reset from `script.py` for a stale client
+* figure out how to send over powershell STDERR as well as STDOUT in result
 
 ### Setup
 * Create a fake Google account
