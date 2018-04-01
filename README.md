@@ -4,12 +4,10 @@ A RAT (Remote Access Tool) for Windows systems using google apps script as the m
 **NOTE:** Current limit to data upload and download is 8.5 MB. This is due to the [limits of google sheets](https://gsuitetips.com/tips/sheets/google-spreadsheet-limitations/).
 
 ### TODO
+* add screen capture
 * add extra encryption on top of b64
-* test chunked upload of files
-* add code for chunked file downloads
 * add timestamps to google drive output
 * implement data reset from `script.py` for a stale client
-* figure out how to send over powershell STDERR as well as STDOUT in result
 
 ### Setup
 * Create a fake Google account
