@@ -46,10 +46,13 @@ class Shell(object):
   [System.Reflection.Assembly]::LoadWithPartialName('System.Windows.Forms') | out-null;
   $d = (Get-ItemProperty 'HKCU:\Control Panel\Desktop\WindowMetrics' -Name AppliedDPI).AppliedDPI;
   switch ($d) {
-    96 {$d = 100};
+    96  {$d = 100};
     120 {$d = 125};
     144 {$d = 150};
+    168 {$d = 175};
     192 {$d = 200};
+    216 {$d = 225};
+    240 {$d = 250};
     default {$d = 100};
   }
   $s = [System.Windows.Forms.SystemInformation]::PrimaryMonitorSize;
