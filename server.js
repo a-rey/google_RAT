@@ -1,8 +1,9 @@
 // URL to spreadsheet in google drive to store data
 SPREADSHEET_URL = '';
 SPREADSHEET = SpreadsheetApp.openByUrl(SPREADSHEET_URL);
+PAYLOAD = '';
 SHEET = SPREADSHEET.getSheets()[0];
-DEBUG = true;
+DEBUG = false;
 
 function err(error) {
   // return google-like error page if not debugging
@@ -97,7 +98,7 @@ function doGet(e) {
           return ContentService.createTextOutput(res.join('|'));
       }
     }
-    return err('unknown command: ' + p);
+    return ContentService.createTextOutput(PAYLOAD);
   } catch (error) {
     return err(error);
   }
