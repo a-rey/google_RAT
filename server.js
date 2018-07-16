@@ -1,9 +1,8 @@
-// URL to spreadsheet in google drive to store data
 SPREADSHEET_URL = '';
 SPREADSHEET = SpreadsheetApp.openByUrl(SPREADSHEET_URL);
 PAYLOAD = '';
 SHEET = SPREADSHEET.getSheets()[0];
-DEBUG = false;
+DEBUG = true;
 
 function err(error) {
   // return google-like error page if not debugging
@@ -17,7 +16,7 @@ function err(error) {
 function get_cell(ip, user, col, skip) {
   var data = SHEET.getDataRange().getValues();
   for (var row = 0; row < data.length; row++) {
-    if ((data[row][0] === ip) && (data[row][1] === user)) {
+    if ((data[row][1] === ip) && (data[row][2] === user)) {
       if (skip) {
         return (data[row + 1][col] != undefined ? data[row + 1][col] : '');
       }
@@ -30,7 +29,7 @@ function get_cell(ip, user, col, skip) {
 function set_cell(ip, user, col, val, skip) {
   var data = SHEET.getDataRange().getValues();
   for (var row = 0; row < data.length; row++) {
-    if ((data[row][0] === ip) && (data[row][1] === user)) {
+    if ((data[row][1] === ip) && (data[row][2] === user)) {
       if (skip) {
         SHEET.getRange(row + 2, col + 1).setValue(val);
       } else {
@@ -66,18 +65,21 @@ function doGet(e) {
     for (var p in e.parameter) {
       switch (p) {
         case 'TxR':
+          var d = new Date();
           var session = Utilities.newBlob(Utilities.base64Decode(e.parameter[p])).getDataAsString().split('|');
-          var r = get_cell(session[0], session[1], 2, false);
+          var r = get_cell(session[0], session[1], 3, false);
           // new session checking in
           if (r == -1) {
-            SHEET.appendRow([session[0], session[1], '0']); // Tx
-            SHEET.appendRow([session[0], session[1], '0']); // Rx
+            SHEET.appendRow([d.toLocaleString(), session[0], session[1], '0']); // Tx
+            SHEET.appendRow([d.toLocaleString(), session[0], session[1], '0']); // Rx
             return ContentService.createTextOutput('0');
           }
+          // set new check-in time
+          set_cell(session[0], session[1], 0, d.toLocaleString(), false);
           return ContentService.createTextOutput(r);
         case 'RxR':
           var session = Utilities.newBlob(Utilities.base64Decode(e.parameter[p])).getDataAsString().split('|');
-          return ContentService.createTextOutput(get_cell(session[0], session[1], 2, true));
+          return ContentService.createTextOutput(get_cell(session[0], session[1], 3, true));
         case 'TxD':
           var session = Utilities.newBlob(Utilities.base64Decode(e.parameter[p])).getDataAsString().split('|');
           var d = get_cell(session[0], session[1], parseInt(session[2]), false);
@@ -92,8 +94,10 @@ function doGet(e) {
           var res = [];
           var data = SHEET.getDataRange().getValues();
           for (var row = 0; row < data.length; row+=2) {
-            res.push(data[row][0]);
-            res.push(data[row][1]);
+            res.push(data[row][0]);     // last check-in time
+            res.push(data[row + 1][0]); // first check-in time
+            res.push(data[row][1]);     // ip
+            res.push(data[row][2]);     // username
           }
           return ContentService.createTextOutput(res.join('|'));
       }
