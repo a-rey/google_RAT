@@ -1,7 +1,7 @@
 # `google_RAT`
 ![Version](https://img.shields.io/static/v1?label=Version&message=1.0&color=blue&style=flat-square) ![Status](https://img.shields.io/static/v1?label=Status&message=Development&color=important&style=flat-square)
 
-A remote access tool using [Google Apps Script](https://developers.google.com/apps-script) as the middle-man for command and control.
+A remote access tool using [Google Apps Script](https://developers.google.com/apps-script) the proxy for command and control.
 
 ## TODO
 
@@ -67,16 +67,16 @@ _NOTE:_ diagrams made with https://draw.io
 
 ![state](./docs/state.png)
 
-- **Example Google Apps Server transaction between a master and client:**
+- **Example server transaction between a master and client in Google Sheets:**
 
 ![server](./docs/server.gif)
 
 - **General Notes:**
-- This design allows for _multiple servers to be ran simultaneously_ against the same backend Google Sheets "database" for client redundancy and availability.
-  
-- All master requests to the server must present a unique key in order for their request to be processed. This key is hardcoded into each server's JavaScript with the `MASTER_KEY` variable.
-  
-- Each payload is base64 encoded _except for the the command type_. This is seperated by the `|` character as the delimiter in the payload. 
+  - This design allows for _multiple servers to be ran simultaneously_ against the same backend Google Sheets "database" for client redundancy and availability.
+
+  - All master requests to the server must present a unique key in order for their request to be processed. This key is hardcoded into each server's JavaScript with the `MASTER_KEY` variable.
+
+  - Each payload is base64 encoded _except for the the command type_. This is seperated by the `|` character as the delimiter in the payload.
 
 ## Limitations
 
