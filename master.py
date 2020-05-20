@@ -45,26 +45,24 @@ class Server(object):
 
   def _isUUID(self, uuid):
     # https://www.ietf.org/rfc/rfc4122.txt
-    return re.findall(r'^[0-9a-f]{8}-[0-9a-f]{4}-[0-5][0-9a-f]{3}-[089ab][0-9a-f]{3}-[0-9a-f]{12}$',uuid)
+    return re.findall(r'^[0-9a-f]{8}-[0-9a-f]{4}-[0-5][0-9a-f]{3}-[089ab][0-9a-f]{3}-[0-9a-f]{12}$', uuid)
 
   def _transfer(self, uuid, prefix, data):
-    # send prefix first if defined
-    if prefix:
-      while True:
-        logging.debug('sending prefix ...')
-        r = requests.post(self.srv, data={'k':self.key,'u':uuid,'d':prefix})
-        if r.ok:
-          break
     # split data into chunks
     chunks = [data[i:i + Server.CHUNK_SIZE] for i in range(0, len(data), Server.CHUNK_SIZE)]
-    if chunks:
-      logging.info(f'sending {len(chunks)} data chunks to client ...')
-      for i in range(len(chunks)):
-        while True:
-          logging.debug(f'sending chunk {i} ...')
-          r = requests.post(self.srv, data={'k':self.key,'u':uuid,'d':chunks[i]})
-          if r.ok:
-            break
+    # send prefix first if specified
+    if prefix:
+      if len(prefix) > Server.CHUNK_SIZE:
+        logging.error(f'prefix length {len(prefix)} is larger than max chunk size {Server.CHUNK_SIZE}')
+        return ''
+      chunks.insert(0, prefix)
+    logging.info(f'sending {len(chunks)} data chunks to client ...')
+    for i in range(len(chunks)):
+      while True:
+        logging.debug(f'sending chunk {i} ...')
+        r = requests.post(self.srv, data={'k':self.key,'u':uuid,'d':chunks[i]})
+        if r.ok:
+          break
     # signal all chunks sent
     while True:
       logging.debug('sending NULL chunk ...')
@@ -108,6 +106,7 @@ class Server(object):
     print('q                          - exit')
 
   def server_client_info(self, uuid):
+    # check UUID
     if not self._isUUID(uuid):
       logging.error(f'bad client UUID: {uuid}')
       return
@@ -149,10 +148,11 @@ class Server(object):
         logging.warning('no hosts found?')
 
   def client_download(self, uuid, remote_path):
+    # check UUID
     if not self._isUUID(uuid):
       logging.error(f'bad client UUID: {uuid}')
       return
-    logging.info(f'downloading file from {remote_path} ...')
+    logging.info(f'downloading file {remote_path} from client {uuid} ...')
     prefix = f"{Server.CLIENT_DOWNLOAD}|{base64.b64encode(remote_path.encode('UTF-8')).decode('UTF-8')}"
     encoded_data = self._transfer(uuid=uuid, prefix=prefix, data='')
     # write to local file
@@ -164,7 +164,25 @@ class Server(object):
       sha1.update(raw)
     logging.success(f'file SHA-1 hash: {sha1.hexdigest()}')
 
+  def client_upload(self, uuid, local_path, remote_path):
+    # check UUID
+    if not self._isUUID(uuid):
+      logging.error(f'bad client UUID: {uuid}')
+      return
+    # check local path
+    if not os.path.exists(local_path):
+      logging.error(f'bad local path: {local_path}')
+      return
+    # read in file data
+    with open(local_path, 'rb') as f:
+      raw_data = f.read()
+    logging.info(f'uploading file {local_path} to {uuid} at {remote_path} ...')
+    prefix = f"{Server.CLIENT_UPLOAD}|{base64.b64encode(remote_path.encode('UTF-8')).decode('UTF-8')}"
+    self._transfer(uuid=uuid, prefix=prefix, data=base64.b64encode(raw_data).decode('UTF-8'))
+    logging.success('upload DONE')
+
   def client_shell(self, uuid):
+    # check UUID
     if not self._isUUID(uuid):
       logging.error(f'bad client UUID: {uuid}')
       return
@@ -208,13 +226,21 @@ if __name__ == '__main__':
     elif args[0] == 'info':
       if len(args) != 2:
         logging.error('missing arguments')
+        srv.help()
         continue
       srv.server_client_info(args[1])
     elif args[0] == 'down':
       if len(args) != 3:
         logging.error('missing arguments')
+        srv.help()
         continue
       srv.client_download(args[1], args[2])
+    elif args[0] == 'up':
+      if len(args) != 4:
+        logging.error('missing arguments')
+        srv.help()
+        continue
+      srv.client_upload(args[1], args[2], args[3])
     elif args[0] == 'shell':
       if len(args) != 2:
         logging.error('missing client UUID')

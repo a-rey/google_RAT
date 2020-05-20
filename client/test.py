@@ -24,48 +24,57 @@ if __name__ == '__main__':
   # ---------------------------------------------------------------------------
   # create a new client on the server
   # ---------------------------------------------------------------------------
-  r = requests.get(args.srv,{'i':base64.b64encode('user|host|ip'.encode('UTF-8'))})
-  uuid = r.content.decode()
+  r = requests.get(args.srv,{'i':base64.b64encode('TEST-USER|TEST-HOST|TEST-IP'.encode('UTF-8'))})
+  uuid = r.content.decode('UTF-8')
   assert(uuid)
   logging.info('new client UUID: {0}'.format(uuid))
   # ---------------------------------------------------------------------------
   # check that the client exists on the server
   # ---------------------------------------------------------------------------
-  r = requests.get(args.srv, params={'k': args.master_key, 'd': 'lsc'})
-  logging.info('client info before: {0}'.format(r.content.decode().split('|')))
-  assert(uuid in r.content.decode().split('|'))
+  r = requests.get(args.srv, params={'k':args.master_key,'u':uuid,'d':'info'})
+  old_info = r.content.decode('UTF-8').split('|')
+  logging.info('client info before:')
+  for x in old_info:
+    print(x)
+  assert(old_info[0] == uuid)
+  assert(old_info[3] == 'IDLE')
   # ---------------------------------------------------------------------------
   # check that client has no data before we add some
   # ---------------------------------------------------------------------------
   r = requests.get(args.srv, params={'u': uuid})
-  assert(not r.content.decode())
+  assert(not r.content.decode('UTF-8'))
   # ---------------------------------------------------------------------------
   # send encoded/chunked data to server for client to download
   # ---------------------------------------------------------------------------
   msg = 'this is a test'
   for word in msg.split(' '):
-    chunk = base64.b64encode(word.encode()).decode()
-    r = requests.post(args.srv, data={'k': args.master_key, 'u': uuid, 'd': chunk})
+    chunk = base64.b64encode(word.encode('UTF-8')).decode('UTF-8')
+    r = requests.post(args.srv, data={'k':args.master_key,'u': uuid,'d':chunk})
     logging.info('[upload] master encoded chunk: {0}'.format(chunk))
   # ---------------------------------------------------------------------------
   # signal to server that we are done uploading data
   # ---------------------------------------------------------------------------
-  r = requests.post(args.srv, data={'k': args.master_key, 'u': uuid, 'd': ''})
+  r = requests.post(args.srv, data={'k':args.master_key,'u':uuid,'d':''})
   # ---------------------------------------------------------------------------
   # pull encoded/chunked data from server for client
   # ---------------------------------------------------------------------------
   buf = []
   while True:
-    r = requests.get(args.srv, params={'u': uuid})
+    r = requests.get(args.srv, params={'u':uuid})
     if not r.content:
       break
-    buf.append(base64.b64decode(r.content).decode())
+    buf.append(base64.b64decode(r.content).decode('UTF-8'))
     logging.info('[download] client decoded chunk: {0}'.format(buf[-1]))
   assert(msg == ' '.join(buf))
   # ---------------------------------------------------------------------------
   # check that client update time has changed
   # ---------------------------------------------------------------------------
-  r = requests.get(args.srv, params={'k': args.master_key, 'd': 'lsc'})
-  logging.info('client info after: {0}'.format(r.content.decode().split('|')))
-  assert(uuid in r.content.decode().split('|'))
+  r = requests.get(args.srv, params={'k':args.master_key,'u':uuid,'d':'info'})
+  new_info = r.content.decode('UTF-8').split('|')
+  logging.info('client info after:')
+  for x in new_info:
+    print(x)
+  assert(new_info[0] == old_info[0])
+  assert(new_info[1] != old_info[1])
+  assert(new_info[3] == 'UPLOADING')
   logging.success('DONE - all tests passed')

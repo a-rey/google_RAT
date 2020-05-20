@@ -191,7 +191,8 @@ function doGet(e) {
               r.push(data[row][CLIENT.INFO]);
               r.push(data[row][CLIENT.STATE]);
               // check if we are looking for one client and have found it
-              if ((e.parameter[URL.DATA] === CMD.GET_CLIENT_INFO) && (row === e.parameter[URL.CLIENT_UUID])) {
+              if ((e.parameter[URL.DATA] === CMD.GET_CLIENT_INFO) &&
+                  (data[row][CLIENT.UUID] === e.parameter[URL.CLIENT_UUID])) {
                 return ContentService.createTextOutput([
                   data[row][CLIENT.UUID],
                   data[row][CLIENT.DATE],
