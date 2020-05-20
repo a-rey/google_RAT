@@ -1,7 +1,7 @@
 # `google_RAT`
 ![Version](https://img.shields.io/static/v1?label=Version&message=1.0&color=blue&style=flat-square) ![Status](https://img.shields.io/static/v1?label=Status&message=Development&color=important&style=flat-square)
 
-A remote access tool using [Google Apps Script](https://developers.google.com/apps-script) the proxy for command and control.
+A Remote Access Tool using [Google Apps Script](https://developers.google.com/apps-script) as the proxy for command and control.
 
 ## TODO
 
