@@ -70,7 +70,6 @@ class Server(object):
       if r.ok:
         break
     logging.success('all chunks sent. waiting for client response ...')
-    data = []
     while True:
       logging.debug('checking if client has sent response ...')
       r = requests.get(self.srv, params={'k':self.key,'u':uuid,'d':'get'})
@@ -79,13 +78,14 @@ class Server(object):
         continue
       if r.text:
         logging.info('received a client response. downloading client chunks ...')
-        data.append(r.text)
         break
       # random back off
       backoff = random.randint(1,10)
       logging.debug(f'no client data. sleeping for {backoff} seconds ...')
       time.sleep(backoff)
+    data = []
     while True:
+      data.append(r.text)
       r = requests.get(self.srv, params={'k':self.key,'u':uuid,'d':'get'})
       if not r.ok:
         logging.warning(f'got a bad HTTP code from server? {str(r.status_code)}')
@@ -140,12 +140,13 @@ class Server(object):
     else:
       hosts = []
       raw = r.content.decode('UTF-8').split('|')
+      if not raw or not len(raw[0]):
+        logging.warning('no hosts found?')
+        return
       for uuid,date,raw_info,state in zip(raw[0::4], raw[1::4], raw[2::4], raw[3::4]):
         # extract info from encoded raw info
         info = base64.b64decode(raw_info.encode('UTF-8')).decode('UTF-8').split('|')
         print(f'[{uuid}][{date}][{state}] {info[0]}@{info[1]} ({info[2]})')
-      if not raw:
-        logging.warning('no hosts found?')
 
   def client_download(self, uuid, remote_path):
     # check UUID
@@ -178,8 +179,11 @@ class Server(object):
       raw_data = f.read()
     logging.info(f'uploading file {local_path} to {uuid} at {remote_path} ...')
     prefix = f"{Server.CLIENT_UPLOAD}|{base64.b64encode(remote_path.encode('UTF-8')).decode('UTF-8')}"
-    self._transfer(uuid=uuid, prefix=prefix, data=base64.b64encode(raw_data).decode('UTF-8'))
-    logging.success('upload DONE')
+    resp = self._transfer(uuid=uuid, prefix=prefix, data=base64.b64encode(raw_data).decode('UTF-8'))
+    if resp != 'ok':
+      logging.warning(f'received unexpected client response? {resp}')
+    else:
+      logging.success('upload DONE')
 
   def client_shell(self, uuid):
     # check UUID
