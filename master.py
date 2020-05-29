@@ -2,6 +2,7 @@
 import os
 import re
 import time
+import shlex
 import random
 import base64
 import hashlib
@@ -70,6 +71,7 @@ class Server(object):
       if r.ok:
         break
     logging.success('all chunks sent. waiting for client response ...')
+    data = []
     while True:
       logging.debug('checking if client has sent response ...')
       r = requests.get(self.srv, params={'k':self.key,'u':uuid,'d':'get'})
@@ -77,23 +79,23 @@ class Server(object):
         logging.warning(f'got a bad HTTP code from server? {str(r.status_code)}')
         continue
       if r.text:
-        logging.info('received a client response. downloading client chunks ...')
+        data.append(r.text)
+        logging.info('client is done uploading. downloading client chunks ...')
+        logging.debug(f'downloaded client chunk of {len(r.text)} bytes')
         break
       # random back off
       backoff = random.randint(1,10)
       logging.debug(f'no client data. sleeping for {backoff} seconds ...')
       time.sleep(backoff)
-    data = []
     while True:
-      data.append(r.text)
       r = requests.get(self.srv, params={'k':self.key,'u':uuid,'d':'get'})
       if not r.ok:
         logging.warning(f'got a bad HTTP code from server? {str(r.status_code)}')
         continue
       if not r.text:
         break
-      logging.info(f'downloaded client chunk of {len(r.text)} bytes')
       data.append(r.text)
+      logging.debug(f'downloaded client chunk of {len(r.text)} bytes')
     logging.success(f'downloaded all {len(data)} client chunks')
     return ''.join(data)
 
@@ -158,8 +160,9 @@ class Server(object):
     encoded_data = self._transfer(uuid=uuid, prefix=prefix, data='')
     # write to local file
     sha1 = hashlib.sha1()
-    logging.info(f'writing result to {os.path.basename(remote_path)} ...')
-    with open(os.path.basename(remote_path),'wb') as f:
+    filename = f'{uuid}.{int(time.time())}'
+    logging.info(f'writing data to {filename} ...')
+    with open(filename,'wb') as f:
       raw = base64.b64decode(encoded_data)
       f.write(raw)
       sha1.update(raw)
@@ -181,7 +184,7 @@ class Server(object):
     prefix = f"{Server.CLIENT_UPLOAD}|{base64.b64encode(remote_path.encode('UTF-8')).decode('UTF-8')}"
     resp = self._transfer(uuid=uuid, prefix=prefix, data=base64.b64encode(raw_data).decode('UTF-8'))
     if resp != 'ok':
-      logging.warning(f'received unexpected client response? {resp}')
+      logging.warning(f"received unexpected client response? {base64.b64decode(resp).decode('UTF-8')}")
     else:
       logging.success('upload DONE')
 
@@ -222,7 +225,10 @@ if __name__ == '__main__':
   srv = Server(args.server_url, args.master_key)
   # accept user input for hosts
   while True:
-    args = input('> ').split()
+    args = shlex.split(input('> '))
+    if not args:
+      srv.help()
+      continue
     if args[0] == 'q':
       break
     elif args[0] == 'lsc':
