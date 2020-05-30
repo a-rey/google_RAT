@@ -1,9 +1,10 @@
 ## Client Support
 
-![Python](https://img.shields.io/static/v1?label=Python&message=2.7,%203%2B&color=success&logo=python&style=flat-square&logoColor=green) 
+![Python](https://img.shields.io/static/v1?label=Python&message=2.7%2C%203%2B&color=success&logo=python&style=flat-square&logoColor=green) 
 ## Deployment Notes
 
-- Since Python is an interpreted language, `client.py` is written to limit payload size. The client uses Python's `urllib` (versions [2.7](https://docs.python.org/2.7/library/urllib.html) and [3+](https://docs.python.org/3/library/urllib.html)) for making HTTP requests to the array of Google Apps Servers.
+- Since Python is an interpreted language, `client.py` is written to limit payload size. 
+- The client uses Python's `urllib` (version documentation for [2.7](https://docs.python.org/2.7/library/urllib.html) and [3+](https://docs.python.org/3/library/urllib.html)) for making HTTP requests to the array of Google Apps Servers.
 - Add your Google Apps Server URLs to the `srv` array variable in `client.py`. The client will cycle through the array to load balance server connections.
 - Run the following Python to generate a payload:
 
