@@ -42,6 +42,7 @@ A Remote Access Tool using [Google Apps Script](https://developers.google.com/ap
 ### :two: Test Server Connection
 
 - Run [`./client/test.py`](./client/test.py) in order to test your server URL connection and `MASTER_KEY`:
+  - **NOTE:** _Running this test will leave an empty inactive client in the Google Sheets database_. Simply delete that row to remove this inactive client.
 
 ![test](./docs/test.gif)
 
@@ -51,7 +52,7 @@ A Remote Access Tool using [Google Apps Script](https://developers.google.com/ap
 
 ### :four: Run Master
 
-- Run the master to interact with clients (_using a Python client in the example below_):
+- Run the master to interact with clients:
 
 ![master](./docs/master.gif)
 
