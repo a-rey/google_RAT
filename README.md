@@ -8,6 +8,7 @@ A Remote Access Tool using [Google Apps Script](https://developers.google.com/ap
 - [ ] Support multiple masters. Any given HTTP POST/GET request from a master can fail due to another master or server having modified the Google Sheets database first for a specific client.
 - [ ] Support built-in key logging for each client type. Depending on the client type and OS platform, the ability to log user keystrokes changes.
 - [ ] Support built-in screenshot capture for each client type. Depending on the client type and OS platform, the ability to capture a screenshot image changes.
+- [ ] Support built-in "dissolve" functionality for each client type.
 - [ ] Update C2 diagram to remove number of chunks from payload format.
 
 ## Dependencies
