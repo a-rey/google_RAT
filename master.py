@@ -131,8 +131,7 @@ class Server(object):
     raw_info = base64.b64decode(raw_client_info[2].encode('UTF-8')).decode('UTF-8').split('|')
     result['user'] = raw_info[0]
     result['host'] = raw_info[1]
-    result['ip'] = raw_info[2]
-    logging.success(f"[{result['uuid']}][{result['date']}][{result['state']}] {result['user']}@{result['host']} ({result['ip']})")
+    logging.success(f"[{result['uuid']}][{result['date']}][{result['state']}] {result['user']}@{result['host']}")
     return result
 
   def server_list_clients(self):
@@ -148,7 +147,7 @@ class Server(object):
       for uuid,date,raw_info,state in zip(raw[0::4], raw[1::4], raw[2::4], raw[3::4]):
         # extract info from encoded raw info
         info = base64.b64decode(raw_info.encode('UTF-8')).decode('UTF-8').split('|')
-        print(f'[{uuid}][{date}][{state}] {info[0]}@{info[1]} ({info[2]})')
+        print(f'[{uuid}][{date}][{state}] {info[0]}@{info[1]}')
 
   def client_download(self, uuid, remote_path):
     # check UUID

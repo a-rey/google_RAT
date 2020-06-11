@@ -24,7 +24,7 @@ if __name__ == '__main__':
   # ---------------------------------------------------------------------------
   # create a new client on the server
   # ---------------------------------------------------------------------------
-  r = requests.get(args.srv,{'i':base64.b64encode('TEST-USER|TEST-HOST|TEST-IP'.encode('UTF-8'))})
+  r = requests.get(args.srv,{'i':base64.b64encode('TEST-USER|TEST-HOST'.encode('UTF-8'))})
   uuid = r.content.decode('UTF-8')
   assert(uuid)
   logging.info('new client UUID: {0}'.format(uuid))
