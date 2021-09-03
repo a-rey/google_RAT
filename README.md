@@ -22,6 +22,7 @@ A Remote Access Tool using [Google Apps Script](https://developers.google.com/ap
 
 ### :one: Deploy Google Apps Script C2 Server
 
+* **NOTE:** Use a private browser session for the following steps to prevent conflicts with any other Google accounts you may be currently signed into
 * Create a fake Google account (https://accounts.google.com/signup)
 * Create a new empty spreadsheet in the fake account's Google Drive (https://drive.google.com)
 * Make this new spreadsheet public and openly editable by link:
@@ -30,14 +31,16 @@ A Remote Access Tool using [Google Apps Script](https://developers.google.com/ap
   * **NOTE:** Remove `?usp=sharing` at the end of the `SPREADSHEET_URL`. The URL should end in `/edit` only.
 * Visit Google App Scripts (https://www.google.com/script/start/) and make a new project under your new Google account:
   * Start Scripting > New Project
-* Paste your formatted code from `server.js` and save the project
-* Publish the server:
-  * Publish > Deploy as web app
-    * Fill in the blank with something
+* Paste your now formatted code from `server.js` and save the project
+* Publish the project:
+  * **NOTE:** Following steps taken from Google documentation [here](https://developers.google.com/apps-script/guides/web#new-editor)
+  * Deploy (top right corner) > New Deployment > Web App (as the deployment type)
+    * Fill in the description field with something
     * Make sure the app is executed as `Me`
-    * Make sure `Anyone, even anonymous` can access the app
-  * Click `Deploy`
-  * Review Permissions > Select your fake account > Advanced > Go to Untitled project (unsafe) > Allow
+    * Make sure `Anyone` can access the app
+    * Click `Deploy`
+    * Click `Authorize Access` > Your fake account > Advanced > Go to ... (unsafe) > Allow
+      * **NOTE:** If you do not see this step, **make sure you are using a private browser session** so there are no conflicts with other Google accounts you may be currently signed in to
   * **Save the application URL** (it should end in `/exec`). This is what the clients and master will connect to.
 
 ### :two: Test Server Connection
